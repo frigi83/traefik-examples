@@ -1,0 +1,313 @@
+version: '3'
+
+services:
+
+# =============================================================
+#
+#	TRAEFIK - reverse proxy
+#
+# =============================================================
+
+  reverse-proxy:
+    image: traefik:latest
+    command: --providers.docker
+    environment:
+      CF_API_EMAIL: ${CF_API_EMAIL}
+      CF_API_KEY: ${CF_API_KEY}
+      CLOUDFLARE_EMAIL: ${CLOUDFLARE_EMAIL}
+      CLOUDFLARE_API_KEY: ${CLOUDFLARE_API_KEY}
+    container_name: traefik
+    ports:
+      - 80:80
+      - 443:443
+      - 8081:8080
+    network_mode: "host"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock  # So that Traefik can listen to the Docker events
+      - /volume1/docker/traefik/acme.json:/acme.json
+      - /volume1/docker/traefik/traefik.toml:/traefik.toml
+      - /volume1/docker/traefik/provider-file.toml:/provider-file.toml
+    restart: always
+
+
+# =============================================================
+#
+#	WHOAMI - test webserver
+#
+# =============================================================
+
+  whoami:
+    image: containous/whoami
+    container_name: whoami
+    labels:
+      - "traefik.http.routers.whoami.rule=Host(`whoami.${DOMAIN}`)"
+      - "traefik.http.routers.whoami.entrypoints=web-secure"
+      - "traefik.http.routers.whoami.tls.certresolver=certificato"
+      - "traefik.http.routers.whoami.tls.domains[0].main=*.${DOMAIN}"
+      - "traefik.http.routers.whoami.middlewares=whoamiIP"
+      - "traefik.http.middlewares.whoamiIP.ipwhitelist.sourcerange=192.168.2.1/24, 192.168.200.1/24"
+
+
+
+# =============================================================
+#
+#	PORTAINER
+#
+# =============================================================
+
+  portainer:
+    image: portainer/portainer
+    container_name: portainer
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    labels:
+      #	HTTPS traffic
+      - "traefik.http.routers.portainerS.rule=Host(`portainer.${DOMAIN}`)"
+      - "traefik.http.routers.portainerS.entrypoints=web-secure"
+      - "traefik.http.routers.portainerS.tls=true"
+      - "traefik.http.routers.portainerS.tls.certresolver=certificato"
+      - "traefik.http.routers.portainerS.tls.domains[0].main=*.${DOMAIN}"
+      - "traefik.http.routers.portainerS.service=portainerService"
+      - "traefik.http.services.portainerService.loadBalancer.server.port=9000"
+
+      #	HTTP traffic - redirect to httpS
+      - "traefik.http.routers.portainer.entryPoints=web"
+      - "traefik.http.routers.portainer.rule=host(`portainer.${DOMAIN}`)"
+      - "traefik.http.middlewares.portainerMdl.redirectScheme.scheme=https"
+      - "traefik.http.middlewares.portainerMdl.redirectScheme.permanent=true"
+      - "traefik.http.routers.portainer.middlewares=portainerMdl"
+
+
+# =============================================================
+#
+#	GRAFANA
+#
+# =============================================================
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    volumes:
+      - grafana-storage:/var/lib/grafana
+    labels:
+      #	HTTPS traffic
+      - "traefik.http.routers.grafanaS.rule=Host(`pm8.${DOMAIN}`)"
+      - "traefik.http.routers.grafanaS.entrypoints=web-secure"
+      - "traefik.http.routers.grafanaS.tls=true"
+      - "traefik.http.routers.grafanaS.tls.certresolver=certificato"
+      - "traefik.http.routers.grafanaS.tls.domains[0].main=*.${DOMAIN}"
+      - "traefik.http.routers.grafanaS.service=grafanaService"
+      - "traefik.http.services.grafanaService.loadBalancer.server.port=3000"
+
+      #	HTTP traffic - redirect to httpS
+      - "traefik.http.routers.grafana.entryPoints=web"
+      - "traefik.http.routers.grafana.rule=host(`pm8.${DOMAIN}`)"
+      - "traefik.http.middlewares.grafanaMdl.redirectScheme.scheme=https"
+      - "traefik.http.middlewares.grafanaMdl.redirectScheme.permanent=true"
+      - "traefik.http.routers.grafana.middlewares=grafanaMdl"
+
+    environment:
+      - GF_SERVER_ROOT_URL=https://pm8.${DOMAIN}
+      - GF_SERVER_DOMAIN=${DOMAIN}
+      - GF_SMTP_ENABLED=true
+      - GF_SMTP_HOST=smtp.gmail.com:587
+      - GF_SMTP_USER=${GF_SMTP_USER}
+      - GF_SMTP_PASSWORD=${GF_SMTP_PASSWORD}
+      - GF_SMTP_FROM_ADDRESS=${GF_SMTP_FROM_ADDRESS}
+      - GF_SMTP_FROM_NAME=${GF_SMTP_FROM_NAME}
+    restart: always
+
+
+# =============================================================
+#
+#	INFLUXDB
+#
+# =============================================================
+
+  influx:
+    image: influxdb
+    container_name: influx
+    volumes:
+      - /volume1/docker/pm8_data:/var/lib/influxdb
+    ports:
+      - 8086:8086
+    labels:
+      #	HTTPS traffic
+      - "traefik.http.routers.influxS.rule=Host(`influx.${DOMAIN}`)"
+      - "traefik.http.routers.influxS.entrypoints=web-secure"
+      - "traefik.http.routers.influxS.tls=true"
+      - "traefik.http.routers.influxS.tls.certresolver=certificato"
+      - "traefik.http.routers.influxS.tls.domains[0].main=*.${DOMAIN}"
+      - "traefik.http.routers.influxS.service=influxService"
+      - "traefik.http.routers.influxS.middlewares=influxMdlS"
+      - "traefik.http.middlewares.influxMdlS.ipwhitelist.sourcerange=192.168.2.1/24, 192.168.200.0/24"
+      - "traefik.http.services.influxService.loadBalancer.server.port=8086"
+
+      #	HTTP traffic - redirect to httpS
+      - "traefik.http.routers.influx.entryPoints=web"
+      - "traefik.http.routers.influx.rule=host(`influx.${DOMAIN}`)"
+      - "traefik.http.middlewares.influxMdl.redirectScheme.scheme=https"
+      - "traefik.http.middlewares.influxMdl.redirectScheme.permanent=true"
+      - "traefik.http.middlewares.influxMdl.ipwhitelist.sourcerange=192.168.2.1/24, 192.168.200.0/24"
+      - "traefik.http.routers.influx.middlewares=influxMdl"
+    restart: always
+    environment:
+      - INFLUXDB_DB=${INFLUXDB_DB}
+      - INFLUXDB_ADMIN_ENABLED=${INFLUXDB_ADMIN_ENABLED}
+      - INFLUXDB_ADMIN_USER=${INFLUXDB_ADMIN_USER}
+      - INFLUXDB_ADMIN_PASSWORD=${INFLUXDB_ADMIN_PASSWORD}
+
+
+# =============================================================
+#
+#	NODERED
+#
+# =============================================================
+
+  nodered:
+    image: nodered/node-red-docker
+    container_name: nodered
+    volumes:
+      - nodered-storage:/data
+      - /volume1/docker/nodered/settings.js:/data/settings.js
+    labels:
+      #	HTTPS traffic
+      - "traefik.http.routers.noderedS.rule=Host(`nodered.${DOMAIN}`)"
+      - "traefik.http.routers.noderedS.entrypoints=web-secure"
+      - "traefik.http.routers.noderedS.tls=true"
+      - "traefik.http.routers.noderedS.tls.certresolver=certificato"
+      - "traefik.http.routers.noderedS.tls.domains[0].main=*.${DOMAIN}"
+      - "traefik.http.routers.noderedS.service=noderedService"
+      - "traefik.http.routers.noderedS.middlewares=noderedMdlS,noderedMdlS2"
+      - "traefik.http.middlewares.noderedMdlS.ipwhitelist.sourcerange=192.168.2.1/24, 192.168.200.0/24"
+      - "traefik.http.middlewares.noderedMdlS2.basicauth.users=${BASIC_AUTH}"
+      - "traefik.http.services.noderedService.loadBalancer.server.port=1880"
+
+      #	HTTP traffic - redirect to httpS
+      - "traefik.http.routers.nodered.entryPoints=web"
+      - "traefik.http.routers.nodered.rule=host(`nodered.${DOMAIN}`)"
+      - "traefik.http.middlewares.noderedMdl.redirectScheme.scheme=https"
+      - "traefik.http.middlewares.noderedMdl.redirectScheme.permanent=true"
+      - "traefik.http.middlewares.noderedMdl.ipwhitelist.sourcerange=192.168.2.1/24, 192.168.200.0/24"
+      - "traefik.http.routers.nodered.middlewares=noderedMdl"
+    restart: always
+
+
+# =============================================================
+#
+#	UNIFI CONTROLLER
+#
+# =============================================================
+
+  unifi:
+    image: jacobalberty/unifi
+    container_name: unifi
+    volumes:
+      - /volume1/docker/unifi/data:/unifi/data
+    ports:
+      - 10001:10001/udp
+      - 3478:3478/udp
+      - 8080:8080
+    labels:
+      #	HTTPS traffic
+      - "traefik.http.routers.unifiS.rule=Host(`controller.${DOMAIN}`)"
+      - "traefik.http.routers.unifiS.entrypoints=web-secure"
+      - "traefik.http.routers.unifiS.tls=true"
+      - "traefik.http.routers.unifiS.tls.certresolver=certificato"
+      - "traefik.http.routers.unifiS.tls.domains[0].main=*.${DOMAIN}"
+      - "traefik.http.routers.unifiS.service=UnifiService"
+      - "traefik.http.routers.unifiS.middlewares=unifiMdlS"
+      - "traefik.http.middlewares.unifiMdlS.ipwhitelist.sourcerange=192.168.2.1/24, 192.168.200.0/24"
+      - "traefik.http.services.UnifiService.loadBalancer.server.port=8443"
+      - "traefik.http.services.UnifiService.loadbalancer.server.scheme=https"
+
+      #	HTTP traffic - redirect to httpS
+      - "traefik.http.routers.unifi.entryPoints=web"
+      - "traefik.http.routers.unifi.rule=host(`controller.${DOMAIN}`)"
+      - "traefik.http.middlewares.unifiMdl.redirectScheme.scheme=https"
+      - "traefik.http.middlewares.unifiMdl.redirectScheme.permanent=true"
+      - "traefik.http.middlewares.unifiMdl.ipwhitelist.sourcerange=192.168.2.1/24, 192.168.200.0/24"
+      - "traefik.http.routers.unifi.middlewares=unifiMdl"
+      - "traefik.http.routers.unifi.service=UnifiService2"
+      - "traefik.http.services.UnifiService2.loadBalancer.server.port=8443"
+      - "traefik.http.services.UnifiService2.loadbalancer.server.scheme=https"
+    restart: always
+
+
+# =============================================================
+#
+#	OUROBOROS
+#
+# =============================================================
+
+  aggiornamento:
+    container_name: ouroboros
+    hostname: ouroboros
+    image: pyouroboros/ouroboros
+    environment:
+      - CLEANUP=true
+      - INTERVAL=3600
+      - LOG_LEVEL=info
+      - SELF_UPDATE=true
+      - IGNORE=mongo influxdb postgres mariadb
+      - TZ=Europe/Zurich
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+
+# =============================================================
+#
+#	PIHOLE
+#
+# =============================================================
+
+
+  pihole:
+    container_name: pihole
+    hostname: hole
+    image: pihole/pihole:latest
+    ports:
+      - '53:53/tcp'
+      - '53:53/udp'
+      # - '67:67/udp'
+      #- 'XXXX:80'
+      #- 'YYYY:443'
+    restart: unless-stopped
+    volumes:
+      - /volume1/docker/pihole/pihole:/etc/pihole
+      - /volume1/docker/pihole/pihole.log:/var/log/pihole.log
+      - /volume1/docker/pihole/dnsmasq.d:/etc/dnsmasq.d
+    #cap_add:
+    #  - NET_ADMIN
+    environment:
+      - ServerIP=192.168.2.18
+      - PROXY_LOCATION=hole
+      - VIRTUAL_HOST=hole.momo.casa
+      - VIRTUAL_PORT=80
+      - TZ=Europe/Zurich
+      - WEBPASSWORD=kindligirl
+      - DNS1=192.168.2.1
+      - DNS2=no
+    labels:
+      #	HTTPS traffic
+      - "traefik.http.routers.holeS.rule=Host(`hole.momo.casa`)"
+      - "traefik.http.routers.holeS.entrypoints=web-secure"
+      - "traefik.http.routers.holeS.tls=true"
+      - "traefik.http.routers.holeS.tls.certresolver=certificato"
+      - "traefik.http.routers.holeS.tls.domains[0].main=*.momo.casa"
+      - "traefik.http.routers.holeS.service=holeService"
+      - "traefik.http.services.holoService.loadBalancer.server.port=80"
+      - "traefik.http.services.holeService.loadbalancer.server.scheme=https"
+
+      #	HTTP traffic - redirect to httpS
+      - "traefik.http.routers.hole.entryPoints=web"
+      - "traefik.http.routers.hole.rule=host(`hole.momo.casa`)"
+      - "traefik.http.routers.hole.service=holeService2"
+      - "traefik.http.services.holeService2.loadbalancer.server.scheme=http"
+
+volumes:
+
+  grafana-storage:
+
+  nodered-storage:
