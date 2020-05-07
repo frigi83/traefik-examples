@@ -8,6 +8,23 @@ Esempi di configurazione tramite [docker-compose](https://docs.docker.com/compos
 
 Vi serve un'installazione di docker e docker-compose funzionante. Le porte 80 e 443 non devono essere occupate da altri processi. Configurate sul vostro DNS un dominio (meglio se wildcard) che punti sulla macchina con docker.
 
+Ogni container verrà configurato solo per l'entrypoint https perché nel file di configurazione statica è presente la seguente configurazione nel file ```traefik.toml```
+
+```
+[entryPoints]
+  [entryPoints.web]
+    address = ":80"
+
+    [entryPoints.web.http]
+    [entryPoints.web.http.redirections]
+      [entryPoints.web.http.redirections.entryPoint]
+        to = "web-secure"
+        scheme = "https"
+
+  [entryPoints.web-secure]
+    address = ":443"
+```
+
 
 ### Installing
 
