@@ -11,6 +11,8 @@ Vi serve un'installazione di docker e docker-compose funzionante. Le porte 80 e 
 
 ### Installing
 
+Prima di tutto dovete rinominare il file ```var.env``` in ```.env``` e modificare secondo il bisogno le variabili presenti nel file.
+
 I container docker possono essere installati ed eseguiti con il seguente comando (a seconda dell'installazione potrebbe servire il comando sudo prima di docker-compose).
 
 ```
