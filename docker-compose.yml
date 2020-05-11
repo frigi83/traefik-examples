@@ -10,23 +10,28 @@ services:
 
   reverse-proxy:
     image: traefik:latest
-    command: --providers.docker
+    # command: --providers.docker
     environment:
       CF_API_EMAIL: ${CF_API_EMAIL}
       CF_API_KEY: ${CF_API_KEY}
       CLOUDFLARE_EMAIL: ${CLOUDFLARE_EMAIL}
       CLOUDFLARE_API_KEY: ${CLOUDFLARE_API_KEY}
     container_name: traefik
+    labels:
+      - "traefik.http.routers.api.rule=Host(`traefik.momo.casa`)"
+      - "traefik.http.routers.api.service=api@internal"
+      # - "traefik.http.routers.api.middlewares=auth"
+      # - "traefik.http.middlewares.auth.basicauth.users=test:$$apr1$$H6uskkkW$$IgXLP6ewTrSuBkTrqE8wj/,test2:$$apr1$$d9hr9HBB$$4HxwgUir3HP4EsggP/QNo0"
     ports:
       - 80:80
       - 443:443
       - 8081:8080
-    network_mode: "host"
+    #network_mode: "host"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock  # So that Traefik can listen to the Docker events
       - /volume1/docker/traefik/acme.json:/acme.json
       - /volume1/docker/traefik/traefik.toml:/traefik.toml
-      - /volume1/docker/traefik/provider-file.toml:/provider-file.toml
+      - /volume1/docker/traefik/FileProvider/:/FileProvider/
     restart: always
 
 
@@ -44,8 +49,12 @@ services:
       - "traefik.http.routers.whoami.entrypoints=web-secure"
       - "traefik.http.routers.whoami.tls.certresolver=certificato"
       - "traefik.http.routers.whoami.tls.domains[0].main=*.${DOMAIN}"
-      - "traefik.http.routers.whoami.middlewares=whoamiIP"
-      - "traefik.http.middlewares.whoamiIP.ipwhitelist.sourcerange=192.168.2.1/24, 192.168.200.1/24"
+
+      - "traefik.http.routers.whoami.middlewares=whoamisecure"
+      - "traefik.http.middlewares.whoamisecure.forwardauth.address=http://oauth:4181"
+      - "traefik.http.middlewares.whoamisecure.forwardauth.authResponseHeaders=X-Forwarded-User"
+      - "traefik.http.middlewares.whoamisecure.forwardauth.authResponseHeaders=X-Auth-User, X-Secret"
+      - "traefik.http.middlewares.whoamisecure.forwardauth.trustForwardHeader=true"
 
 
 
@@ -125,8 +134,6 @@ services:
       - "traefik.http.routers.influxS.tls.certresolver=certificato"
       - "traefik.http.routers.influxS.tls.domains[0].main=*.${DOMAIN}"
       - "traefik.http.routers.influxS.service=influxService"
-      - "traefik.http.routers.influxS.middlewares=influxMdlS"
-      - "traefik.http.middlewares.influxMdlS.ipwhitelist.sourcerange=192.168.2.1/24, 192.168.200.0/24"
       - "traefik.http.services.influxService.loadBalancer.server.port=8086"
     restart: always
     environment:
@@ -156,9 +163,8 @@ services:
       - "traefik.http.routers.noderedS.tls.certresolver=certificato"
       - "traefik.http.routers.noderedS.tls.domains[0].main=*.${DOMAIN}"
       - "traefik.http.routers.noderedS.service=noderedService"
-      - "traefik.http.routers.noderedS.middlewares=noderedMdlS,noderedMdlS2"
-      - "traefik.http.middlewares.noderedMdlS.ipwhitelist.sourcerange=192.168.2.1/24, 192.168.200.0/24"
-      - "traefik.http.middlewares.noderedMdlS2.basicauth.users=${BASIC_AUTH}"
+      - "traefik.http.routers.noderedS.middlewares=noderedMdlS"
+      - "traefik.http.middlewares.noderedMdlS.basicauth.users=${BASIC_AUTH}"
       - "traefik.http.services.noderedService.loadBalancer.server.port=1880"
     restart: always
 
@@ -186,8 +192,6 @@ services:
       - "traefik.http.routers.unifiS.tls.certresolver=certificato"
       - "traefik.http.routers.unifiS.tls.domains[0].main=*.${DOMAIN}"
       - "traefik.http.routers.unifiS.service=UnifiService"
-      - "traefik.http.routers.unifiS.middlewares=unifiMdlS"
-      - "traefik.http.middlewares.unifiMdlS.ipwhitelist.sourcerange=192.168.2.1/24, 192.168.200.0/24"
       - "traefik.http.services.UnifiService.loadBalancer.server.port=8443"
       - "traefik.http.services.UnifiService.loadbalancer.server.scheme=https"
     restart: always
@@ -213,6 +217,36 @@ services:
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+
+
+# =============================================================
+#
+#	OAUTH
+#
+# =============================================================
+
+  oauth:
+    image: thomseddon/traefik-forward-auth
+    container_name: oauth
+    environment:
+        # These Variables are injected via environment file
+        - PROVIDERS_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+        - PROVIDERS_GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+        - SECRET=${SECRET}
+        - INSECURE_COOKIE=false # Example assumes no https, do not use in production
+        - WHITELIST=${WHITELIST}
+        # - DOMAIN=${DOMAIN}
+        - AUTH_HOST=bisbino.${DOMAIN}
+        - COOKIE_DOMAIN=${DOMAIN}
+        - LOG_LEVEL=debug
+    labels:
+        - "traefik.enable=true"
+        - "traefik.http.services.oauth.loadbalancer.server.port=4181"
+        - "traefik.http.routers.oauth.entrypoints=web-secure"
+        - "traefik.http.routers.oauth.tls.certresolver=certificato"
+        - "traefik.http.routers.oauth.tls.domains[0].main=*.${DOMAIN}"
+        - "traefik.http.routers.oauth.rule=Host(`bisbino.${DOMAIN}`)"
+
 
 
 volumes:
