@@ -1,3 +1,4 @@
 /.env
 /.remote-sync.json
 /traefik.toml
+/provide-file.toml

@@ -1,4 +1,4 @@
-version: '3'
+version: '3.7'
 
 services:
 
@@ -10,7 +10,26 @@ services:
 
   reverse-proxy:
     image: traefik:latest
-    # command: --providers.docker
+    command:
+      # - "--log.level=DEBUG"
+      - "--api.dashboard=true"
+      - "--api.insecure=true"
+      - "--providers.file.directory=/FileProvider/"
+      - "--providers.file.watch=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entryPoint.to=web-secure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--entrypoints.web-secure.address=:443"
+      - "--serverstransport.insecureskipverify=true"
+      - "--certificatesresolvers.certificato.acme.dnschallenge=true"
+      - "--certificatesresolvers.certificato.acme.dnschallenge.provider=cloudflare"
+      - "--certificatesresolvers.certificato.acme.dnschallenge.delaybeforecheck=10"
+      - "--certificatesresolvers.certificato.acme.dnschallenge.resolvers=1.1.1.1:53"
+      # - "--certificatesresolvers.certificato.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
+      - "--certificatesresolvers.certificato.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.certificato.acme.storage=acme.json"
     environment:
       CF_API_EMAIL: ${CF_API_EMAIL}
       CF_API_KEY: ${CF_API_KEY}
@@ -18,19 +37,21 @@ services:
       CLOUDFLARE_API_KEY: ${CLOUDFLARE_API_KEY}
     container_name: traefik
     labels:
-      - "traefik.http.routers.api.rule=Host(`traefik.momo.casa`)"
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`traefik.${DOMAIN}`)"
+      - "traefik.http.routers.api.entrypoints=web-secure"
+      - "traefik.http.routers.api.tls.certresolver=certificato"
+      - "traefik.http.routers.api.tls.domains[0].main=*.${DOMAIN}"
       - "traefik.http.routers.api.service=api@internal"
-      # - "traefik.http.routers.api.middlewares=auth"
-      # - "traefik.http.middlewares.auth.basicauth.users=test:$$apr1$$H6uskkkW$$IgXLP6ewTrSuBkTrqE8wj/,test2:$$apr1$$d9hr9HBB$$4HxwgUir3HP4EsggP/QNo0"
     ports:
       - 80:80
       - 443:443
-      - 8081:8080
-    #network_mode: "host"
+      # - 8081:8080
+    # network_mode: "host"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock  # So that Traefik can listen to the Docker events
       - /volume1/docker/traefik/acme.json:/acme.json
-      - /volume1/docker/traefik/traefik.toml:/traefik.toml
+      # - /volume1/docker/traefik/traefik.toml:/traefik.toml
       - /volume1/docker/traefik/FileProvider/:/FileProvider/
     restart: always
 
@@ -45,16 +66,17 @@ services:
     image: containous/whoami
     container_name: whoami
     labels:
+      - "traefik.enable=true"
       - "traefik.http.routers.whoami.rule=Host(`whoami.${DOMAIN}`)"
       - "traefik.http.routers.whoami.entrypoints=web-secure"
       - "traefik.http.routers.whoami.tls.certresolver=certificato"
       - "traefik.http.routers.whoami.tls.domains[0].main=*.${DOMAIN}"
 
-      - "traefik.http.routers.whoami.middlewares=whoamisecure"
-      - "traefik.http.middlewares.whoamisecure.forwardauth.address=http://oauth:4181"
-      - "traefik.http.middlewares.whoamisecure.forwardauth.authResponseHeaders=X-Forwarded-User"
-      - "traefik.http.middlewares.whoamisecure.forwardauth.authResponseHeaders=X-Auth-User, X-Secret"
-      - "traefik.http.middlewares.whoamisecure.forwardauth.trustForwardHeader=true"
+      # - "traefik.http.routers.whoami.middlewares=whoamisecure"
+      # - "traefik.http.middlewares.whoamisecure.forwardauth.address=http://oauth:4181"
+      # - "traefik.http.middlewares.whoamisecure.forwardauth.authResponseHeaders=X-Forwarded-User"
+      # - "traefik.http.middlewares.whoamisecure.forwardauth.authResponseHeaders=X-Auth-User, X-Secret"
+      # - "traefik.http.middlewares.whoamisecure.forwardauth.trustForwardHeader=true"
 
 
 
@@ -71,6 +93,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     labels:
       #	HTTPS traffic
+      - "traefik.enable=true"
       - "traefik.http.routers.portainerS.rule=Host(`portainer.${DOMAIN}`)"
       - "traefik.http.routers.portainerS.entrypoints=web-secure"
       - "traefik.http.routers.portainerS.tls=true"
@@ -93,6 +116,7 @@ services:
       - grafana-storage:/var/lib/grafana
     labels:
       #	HTTPS traffic
+      - "traefik.enable=true"
       - "traefik.http.routers.grafanaS.rule=Host(`pm8.${DOMAIN}`)"
       - "traefik.http.routers.grafanaS.entrypoints=web-secure"
       - "traefik.http.routers.grafanaS.tls=true"
@@ -128,6 +152,7 @@ services:
       - 8086:8086
     labels:
       #	HTTPS traffic
+      - "traefik.enable=true"
       - "traefik.http.routers.influxS.rule=Host(`influx.${DOMAIN}`)"
       - "traefik.http.routers.influxS.entrypoints=web-secure"
       - "traefik.http.routers.influxS.tls=true"
@@ -157,6 +182,7 @@ services:
       - /volume1/docker/nodered/settings.js:/data/settings.js
     labels:
       #	HTTPS traffic
+      - "traefik.enable=true"
       - "traefik.http.routers.noderedS.rule=Host(`nodered.${DOMAIN}`)"
       - "traefik.http.routers.noderedS.entrypoints=web-secure"
       - "traefik.http.routers.noderedS.tls=true"
@@ -186,6 +212,7 @@ services:
       - 8080:8080
     labels:
       #	HTTPS traffic
+      - "traefik.enable=true"
       - "traefik.http.routers.unifiS.rule=Host(`controller.${DOMAIN}`)"
       - "traefik.http.routers.unifiS.entrypoints=web-secure"
       - "traefik.http.routers.unifiS.tls=true"
