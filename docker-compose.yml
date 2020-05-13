@@ -12,8 +12,8 @@ services:
     image: traefik:latest
     command:
       # - "--log.level=DEBUG"
-      - "--api.dashboard=true"
-      - "--api.insecure=true"
+      # - "--api.dashboard=true"
+      # - "--api.insecure=true"
       - "--providers.file.directory=/FileProvider/"
       - "--providers.file.watch=true"
       - "--providers.docker=true"
@@ -36,22 +36,19 @@ services:
       CLOUDFLARE_EMAIL: ${CLOUDFLARE_EMAIL}
       CLOUDFLARE_API_KEY: ${CLOUDFLARE_API_KEY}
     container_name: traefik
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.api.rule=Host(`traefik.${DOMAIN}`)"
-      - "traefik.http.routers.api.entrypoints=web-secure"
-      - "traefik.http.routers.api.tls.certresolver=certificato"
-      - "traefik.http.routers.api.tls.domains[0].main=*.${DOMAIN}"
-      - "traefik.http.routers.api.service=api@internal"
+    # labels:
+    #   - "traefik.enable=true"
+    #   - "traefik.http.routers.api.rule=Host(`traefik.${DOMAIN}`)"
+    #   - "traefik.http.routers.api.entrypoints=web-secure"
+    #   - "traefik.http.routers.api.tls.certresolver=certificato"
+    #   - "traefik.http.routers.api.tls.domains[0].main=*.${DOMAIN}"
+    #   - "traefik.http.routers.api.service=api@internal"
     ports:
       - 80:80
       - 443:443
-      # - 8081:8080
-    # network_mode: "host"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock  # So that Traefik can listen to the Docker events
       - /volume1/docker/traefik/acme.json:/acme.json
-      # - /volume1/docker/traefik/traefik.toml:/traefik.toml
       - /volume1/docker/traefik/FileProvider/:/FileProvider/
     restart: always
 
