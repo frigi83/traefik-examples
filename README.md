@@ -20,17 +20,19 @@ Tutta la configurazione di Traefik è presente nel file ```docker-compose.yml```
 
 ### Installing
 
-Prima di tutto dovete rinominare il file ```var.env``` in ```.env``` e modificare secondo il bisogno le variabili presenti nel file. Creare un file ```acme.json``` utilizzando i seguenti comandi:
+1. Prima di tutto dovete rinominare il file ```var.env``` in ```.env``` e modificare secondo il bisogno le variabili presenti nel file.
+
+2. Creare un file ```acme.json``` utilizzando i seguenti comandi:
 
 ```
 touch acme.json
 chmod 600 acme.json
 ```
 
-I container docker possono essere installati ed eseguiti con il seguente comando (a seconda dell'installazione potrebbe servire il comando sudo prima di docker-compose).
+3. I container docker possono essere installati ed eseguiti con il seguente comando (a seconda dell'installazione potrebbe servire il comando sudo prima di docker-compose).
 
 ```
 docker-compose up -d reverse-proxy
 ```
 
-Sostituendo ```reverse-proxy``` con il nome del servizio è possibile installare il container desiderato. Rilanciare lo stesso comando se sono state fatte delle modifiche al file ```.yml```.
+Sostituendo ```reverse-proxy``` con il nome del servizio è possibile installare il container desiderato. Rilanciare lo stesso comando se sono state fatte delle modifiche al file ```docker-compose.yml```.
