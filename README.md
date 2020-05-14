@@ -14,7 +14,7 @@ Tutta la configurazione di Traefik è presente nel file ```docker-compose.yml```
 
     .
     ├── FileProvider             # Directory per i file dinamici del provider file (server non in docker ma nella rete locale)
-    │   └── file.provider.toml   # esempio collegamento server non in docker
+    │   └── file-provider.toml   # esempio collegamento server non in docker
     ├── acme.json                # Certificati generati da Let's Encrypt
     └── docker-compose.yml
 
