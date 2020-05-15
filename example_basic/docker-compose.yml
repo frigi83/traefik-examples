@@ -1,0 +1,246 @@
+version: '3.7'
+
+services:
+
+# =============================================================
+#
+#	TRAEFIK - reverse proxy
+#
+# =============================================================
+
+  reverse-proxy:
+    image: traefik:latest
+    command:
+      # - "--log.level=DEBUG"
+      # - "--api.dashboard=true"
+      # - "--api.insecure=true"
+      - "--providers.file.directory=/FileProvider/"
+      - "--providers.file.watch=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entryPoint.to=web-secure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--entrypoints.web-secure.address=:443"
+      - "--serverstransport.insecureskipverify=true"
+      - "--certificatesresolvers.certificato.acme.dnschallenge=true"
+      - "--certificatesresolvers.certificato.acme.dnschallenge.provider=cloudflare"
+      - "--certificatesresolvers.certificato.acme.dnschallenge.delaybeforecheck=10"
+      - "--certificatesresolvers.certificato.acme.dnschallenge.resolvers=1.1.1.1:53"
+      # - "--certificatesresolvers.certificato.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
+      - "--certificatesresolvers.certificato.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.certificato.acme.storage=acme.json"
+    environment:
+      CF_API_EMAIL: ${CF_API_EMAIL}
+      CF_API_KEY: ${CF_API_KEY}
+      CLOUDFLARE_EMAIL: ${CLOUDFLARE_EMAIL}
+      CLOUDFLARE_API_KEY: ${CLOUDFLARE_API_KEY}
+    container_name: traefik
+    # labels:
+    #   - "traefik.enable=true"
+    #   - "traefik.http.routers.api.rule=Host(`traefik.${DOMAIN}`)"
+    #   - "traefik.http.routers.api.entrypoints=web-secure"
+    #   - "traefik.http.routers.api.tls.certresolver=certificato"
+    #   - "traefik.http.routers.api.tls.domains[0].main=*.${DOMAIN}"
+    #   - "traefik.http.routers.api.service=api@internal"
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock  # So that Traefik can listen to the Docker events
+      - /volume1/docker/traefik/acme.json:/acme.json
+      - /volume1/docker/traefik/FileProvider/:/FileProvider/
+    restart: always
+
+
+# =============================================================
+#
+#	WHOAMI - test webserver
+#
+# =============================================================
+
+  whoami:
+    image: containous/whoami
+    container_name: whoami
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.whoami.rule=Host(`whoami.${DOMAIN}`)"
+      - "traefik.http.routers.whoami.entrypoints=web-secure"
+      - "traefik.http.routers.whoami.tls.certresolver=certificato"
+      - "traefik.http.routers.whoami.tls.domains[0].main=*.${DOMAIN}"
+
+
+# =============================================================
+
+#	PORTAINER
+#
+# =============================================================
+
+  portainer:
+    image: portainer/portainer
+    container_name: portainer
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    labels:
+      #	HTTPS traffic
+      - "traefik.enable=true"
+      - "traefik.http.routers.portainerS.rule=Host(`portainer.${DOMAIN}`)"
+      - "traefik.http.routers.portainerS.entrypoints=web-secure"
+      - "traefik.http.routers.portainerS.tls=true"
+      - "traefik.http.routers.portainerS.tls.certresolver=certificato"
+      - "traefik.http.routers.portainerS.tls.domains[0].main=*.${DOMAIN}"
+      - "traefik.http.routers.portainerS.service=portainerService"
+      - "traefik.http.services.portainerService.loadBalancer.server.port=9000"
+
+
+# =============================================================
+#
+#	GRAFANA
+#
+# =============================================================
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    volumes:
+      - grafana-storage:/var/lib/grafana
+    labels:
+      #	HTTPS traffic
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`pm8.${DOMAIN}`)"
+      - "traefik.http.routers.grafana.entrypoints=web-secure"
+      - "traefik.http.routers.grafana.tls=true"
+      - "traefik.http.routers.grafana.tls.certresolver=certificato"
+      - "traefik.http.routers.grafana.tls.domains[0].main=*.${DOMAIN}"
+      - "traefik.http.routers.grafana.service=grafanaService"
+      - "traefik.http.services.grafanaService.loadBalancer.server.port=3000"
+
+    environment:
+      - GF_SERVER_ROOT_URL=https://pm8.${DOMAIN}
+      - GF_SERVER_DOMAIN=${DOMAIN}
+      - GF_SMTP_ENABLED=true
+      - GF_SMTP_HOST=smtp.gmail.com:587
+      - GF_SMTP_USER=${GF_SMTP_USER}
+      - GF_SMTP_PASSWORD=${GF_SMTP_PASSWORD}
+      - GF_SMTP_FROM_ADDRESS=${GF_SMTP_FROM_ADDRESS}
+      - GF_SMTP_FROM_NAME=${GF_SMTP_FROM_NAME}
+
+    restart: always
+
+
+# =============================================================
+#
+#	INFLUXDB
+#
+# =============================================================
+
+  influx:
+    image: influxdb
+    container_name: influx
+    volumes:
+      - /volume1/docker/pm8_data:/var/lib/influxdb
+    ports:
+      - 8086:8086
+    labels:
+      #	HTTPS traffic
+      - "traefik.enable=true"
+      - "traefik.http.routers.influxS.rule=Host(`influx.${DOMAIN}`)"
+      - "traefik.http.routers.influxS.entrypoints=web-secure"
+      - "traefik.http.routers.influxS.tls=true"
+      - "traefik.http.routers.influxS.tls.certresolver=certificato"
+      - "traefik.http.routers.influxS.tls.domains[0].main=*.${DOMAIN}"
+      - "traefik.http.routers.influxS.service=influxService"
+      - "traefik.http.services.influxService.loadBalancer.server.port=8086"
+    restart: always
+    environment:
+      - INFLUXDB_DB=${INFLUXDB_DB}
+      - INFLUXDB_ADMIN_ENABLED=${INFLUXDB_ADMIN_ENABLED}
+      - INFLUXDB_ADMIN_USER=${INFLUXDB_ADMIN_USER}
+      - INFLUXDB_ADMIN_PASSWORD=${INFLUXDB_ADMIN_PASSWORD}
+
+
+# =============================================================
+#
+#	NODERED
+#
+# =============================================================
+
+  nodered:
+    image: nodered/node-red-docker
+    container_name: nodered
+    volumes:
+      - nodered-storage:/data
+      - /volume1/docker/nodered/settings.js:/data/settings.js
+    labels:
+      #	HTTPS traffic
+      - "traefik.enable=true"
+      - "traefik.http.routers.noderedS.rule=Host(`nodered.${DOMAIN}`)"
+      - "traefik.http.routers.noderedS.entrypoints=web-secure"
+      - "traefik.http.routers.noderedS.tls=true"
+      - "traefik.http.routers.noderedS.tls.certresolver=certificato"
+      - "traefik.http.routers.noderedS.tls.domains[0].main=*.${DOMAIN}"
+      - "traefik.http.routers.noderedS.service=noderedService"
+      - "traefik.http.routers.noderedS.middlewares=noderedMdlS"
+      - "traefik.http.middlewares.noderedMdlS.basicauth.users=${BASIC_AUTH}"
+      - "traefik.http.services.noderedService.loadBalancer.server.port=1880"
+
+    restart: always
+
+
+# =============================================================
+#
+#	UNIFI CONTROLLER
+#
+# =============================================================
+
+  unifi:
+    image: jacobalberty/unifi
+    container_name: unifi
+    volumes:
+      - /volume1/docker/unifi/data:/unifi/data
+    ports:
+      - 10001:10001/udp
+      - 3478:3478/udp
+      - 8080:8080
+    labels:
+      #	HTTPS traffic
+      - "traefik.enable=true"
+      - "traefik.http.routers.unifiS.rule=Host(`controller.${DOMAIN}`)"
+      - "traefik.http.routers.unifiS.entrypoints=web-secure"
+      - "traefik.http.routers.unifiS.tls=true"
+      - "traefik.http.routers.unifiS.tls.certresolver=certificato"
+      - "traefik.http.routers.unifiS.tls.domains[0].main=*.${DOMAIN}"
+      - "traefik.http.routers.unifiS.service=UnifiService"
+      - "traefik.http.services.UnifiService.loadBalancer.server.port=8443"
+      - "traefik.http.services.UnifiService.loadbalancer.server.scheme=https"
+    restart: always
+
+
+# =============================================================
+#
+#	OUROBOROS
+#
+# =============================================================
+
+  aggiornamento:
+    container_name: ouroboros
+    hostname: ouroboros
+    image: pyouroboros/ouroboros
+    environment:
+      - CLEANUP=true
+      - INTERVAL=3600
+      - LOG_LEVEL=info
+      - SELF_UPDATE=true
+      - IGNORE=mongo influxdb postgres mariadb
+      - TZ=Europe/Zurich
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+
+
+volumes:
+
+  grafana-storage:
+
+  nodered-storage:
