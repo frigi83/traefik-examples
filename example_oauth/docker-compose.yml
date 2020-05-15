@@ -123,13 +123,6 @@ services:
       - "traefik.http.routers.grafana.service=grafanaService"
       - "traefik.http.services.grafanaService.loadBalancer.server.port=3000"
 
-      # Oauth for grafana
-      - "traefik.http.routers.grafana.middlewares=GrafanaMdl"
-      - "traefik.http.middlewares.GrafanaMdl.forwardauth.address=http://oauth:4181"
-      - "traefik.http.middlewares.GrafanaMdl.forwardauth.authResponseHeaders=X-Forwarded-User"
-      - "traefik.http.middlewares.GrafanaMdl.forwardauth.authResponseHeaders=X-Auth-User, X-Secret"
-      - "traefik.http.middlewares.GrafanaMdl.forwardauth.trustForwardHeader=true"
-
     environment:
       - GF_SERVER_ROOT_URL=https://pm8.${DOMAIN}
       - GF_SERVER_DOMAIN=${DOMAIN}
@@ -195,9 +188,16 @@ services:
       - "traefik.http.routers.noderedS.tls.certresolver=certificato"
       - "traefik.http.routers.noderedS.tls.domains[0].main=*.${DOMAIN}"
       - "traefik.http.routers.noderedS.service=noderedService"
-      - "traefik.http.routers.noderedS.middlewares=noderedMdlS"
-      - "traefik.http.middlewares.noderedMdlS.basicauth.users=${BASIC_AUTH}"
+      # - "traefik.http.routers.noderedS.middlewares=noderedMdlS"
+      # - "traefik.http.middlewares.noderedMdlS.basicauth.users=${BASIC_AUTH}"
       - "traefik.http.services.noderedService.loadBalancer.server.port=1880"
+
+      # Oauth for whoami
+      - "traefik.http.routers.noderedS.middlewares=noderedMdlS"
+      - "traefik.http.middlewares.noderedMdlS.forwardauth.address=http://oauth:4181"
+      - "traefik.http.middlewares.noderedMdlS.forwardauth.authResponseHeaders=X-Forwarded-User"
+      - "traefik.http.middlewares.noderedMdlS.forwardauth.authResponseHeaders=X-Auth-User, X-Secret"
+      - "traefik.http.middlewares.noderedMdlS.forwardauth.trustForwardHeader=true"
     restart: always
 
 
@@ -262,7 +262,6 @@ services:
     image: thomseddon/traefik-forward-auth
     container_name: oauth
     environment:
-        # These Variables are injected via environment file
         - PROVIDERS_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
         - PROVIDERS_GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
         - SECRET=${OAUTH_SECRET}
@@ -271,14 +270,6 @@ services:
         - AUTH_HOST=auth.${DOMAIN}
         # - LIFETIME=604800
         - LOG_LEVEL=debug
-    labels:
-        - "traefik.enable=true"
-        - "traefik.http.routers.oauth.entrypoints=web-secure"
-        - "traefik.http.routers.oauth.tls.certresolver=certificato"
-        - "traefik.http.routers.oauth.tls.domains[0].main=*.${DOMAIN}"
-        - "traefik.http.routers.oauth.rule=Host(`auth.${DOMAIN}`)"
-        - "traefik.http.routers.oauth.service=oauthService"
-        - "traefik.http.services.oauthService.loadBalancer.server.port=4181"
 
 
 volumes:

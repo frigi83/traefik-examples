@@ -69,16 +69,17 @@ services:
       - "traefik.http.routers.whoami.tls.certresolver=certificato"
       - "traefik.http.routers.whoami.tls.domains[0].main=*.${DOMAIN}"
 
-      # - "traefik.http.routers.whoami.middlewares=whoamisecure"
-      # - "traefik.http.middlewares.whoamisecure.forwardauth.address=http://oauth:4181"
-      # - "traefik.http.middlewares.whoamisecure.forwardauth.authResponseHeaders=X-Forwarded-User"
-      # - "traefik.http.middlewares.whoamisecure.forwardauth.authResponseHeaders=X-Auth-User, X-Secret"
-      # - "traefik.http.middlewares.whoamisecure.forwardauth.trustForwardHeader=true"
+      # Oauth for whoami
+      - "traefik.http.routers.whoami.middlewares=whoamisecure"
+      - "traefik.http.middlewares.whoamisecure.forwardauth.address=http://oauth:4181"
+      - "traefik.http.middlewares.whoamisecure.forwardauth.authResponseHeaders=X-Forwarded-User"
+      - "traefik.http.middlewares.whoamisecure.forwardauth.authResponseHeaders=X-Auth-User, X-Secret"
+      - "traefik.http.middlewares.whoamisecure.forwardauth.trustForwardHeader=true"
 
 
 
 # =============================================================
-#
+
 #	PORTAINER
 #
 # =============================================================
@@ -114,13 +115,20 @@ services:
     labels:
       #	HTTPS traffic
       - "traefik.enable=true"
-      - "traefik.http.routers.grafanaS.rule=Host(`pm8.${DOMAIN}`)"
-      - "traefik.http.routers.grafanaS.entrypoints=web-secure"
-      - "traefik.http.routers.grafanaS.tls=true"
-      - "traefik.http.routers.grafanaS.tls.certresolver=certificato"
-      - "traefik.http.routers.grafanaS.tls.domains[0].main=*.${DOMAIN}"
-      - "traefik.http.routers.grafanaS.service=grafanaService"
+      - "traefik.http.routers.grafana.rule=Host(`pm8.${DOMAIN}`)"
+      - "traefik.http.routers.grafana.entrypoints=web-secure"
+      - "traefik.http.routers.grafana.tls=true"
+      - "traefik.http.routers.grafana.tls.certresolver=certificato"
+      - "traefik.http.routers.grafana.tls.domains[0].main=*.${DOMAIN}"
+      - "traefik.http.routers.grafana.service=grafanaService"
       - "traefik.http.services.grafanaService.loadBalancer.server.port=3000"
+
+      # Oauth for grafana
+      - "traefik.http.routers.grafana.middlewares=GrafanaMdl"
+      - "traefik.http.middlewares.GrafanaMdl.forwardauth.address=http://oauth:4181"
+      - "traefik.http.middlewares.GrafanaMdl.forwardauth.authResponseHeaders=X-Forwarded-User"
+      - "traefik.http.middlewares.GrafanaMdl.forwardauth.authResponseHeaders=X-Auth-User, X-Secret"
+      - "traefik.http.middlewares.GrafanaMdl.forwardauth.trustForwardHeader=true"
 
     environment:
       - GF_SERVER_ROOT_URL=https://pm8.${DOMAIN}
@@ -131,6 +139,14 @@ services:
       - GF_SMTP_PASSWORD=${GF_SMTP_PASSWORD}
       - GF_SMTP_FROM_ADDRESS=${GF_SMTP_FROM_ADDRESS}
       - GF_SMTP_FROM_NAME=${GF_SMTP_FROM_NAME}
+      # - GF_USERS_ALLOW_SIGN_UP=true
+      # - GF_USERS_ASSIGN_ORG=true
+      # - GF_USERS_ASSIGN_ORG_ROLE=Editor
+      # - GF_AUTH_PROXY_ENABLED=true
+      # - GF_AUTH_PROXY_HEADER_NAME=X-Auth-User
+      # - GF_AUTH_PROXY_HEADER_PROPERTY=usename
+      # - GF_AUTH_PROXY_AUTO_SIGN_UP=true
+
     restart: always
 
 
@@ -256,21 +272,21 @@ services:
         # These Variables are injected via environment file
         - PROVIDERS_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
         - PROVIDERS_GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-        - SECRET=${SECRET}
-        - INSECURE_COOKIE=false # Example assumes no https, do not use in production
+        - SECRET=${OAUTH_SECRET}
         - WHITELIST=${WHITELIST}
-        # - DOMAIN=${DOMAIN}
+        - DOMAIN=${DOMAIN}
         - AUTH_HOST=bisbino.${DOMAIN}
-        - COOKIE_DOMAIN=${DOMAIN}
+        - LIFETIME=604800
+        # - COOKIE_DOMAIN=${DOMAIN}
         - LOG_LEVEL=debug
-    labels:
-        - "traefik.enable=true"
-        - "traefik.http.services.oauth.loadbalancer.server.port=4181"
-        - "traefik.http.routers.oauth.entrypoints=web-secure"
-        - "traefik.http.routers.oauth.tls.certresolver=certificato"
-        - "traefik.http.routers.oauth.tls.domains[0].main=*.${DOMAIN}"
-        - "traefik.http.routers.oauth.rule=Host(`bisbino.${DOMAIN}`)"
-
+    # labels:
+        # - "traefik.enable=true"
+        # - "traefik.http.routers.oauth.entrypoints=web-secure"
+        # - "traefik.http.routers.oauth.tls.certresolver=certificato"
+        # - "traefik.http.routers.oauth.tls.domains[0].main=*.${DOMAIN}"
+        # - "traefik.http.routers.oauth.rule=Host(`bisbino.${DOMAIN}`)"
+        # - "traefik.http.routers.oauth.service=oauthService"
+        # - "traefik.http.services.oauthService.loadBalancer.server.port=4181"
 
 
 volumes:
