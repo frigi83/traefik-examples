@@ -2,3 +2,4 @@
 /.remote-sync.json
 /traefik.toml
 /provider-file.toml
+/docker-compose.yml
