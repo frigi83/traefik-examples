@@ -27,7 +27,7 @@ services:
       - "--certificatesresolvers.certificato.acme.dnschallenge.provider=cloudflare"
       - "--certificatesresolvers.certificato.acme.dnschallenge.delaybeforecheck=10"
       - "--certificatesresolvers.certificato.acme.dnschallenge.resolvers=1.1.1.1:53"
-      # - "--certificatesresolvers.certificato.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
+      - "--certificatesresolvers.certificato.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
       - "--certificatesresolvers.certificato.acme.email=${ACME_EMAIL}"
       - "--certificatesresolvers.certificato.acme.storage=acme.json"
     environment:
@@ -49,7 +49,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock  # So that Traefik can listen to the Docker events
       - /volume1/docker/traefik/acme.json:/acme.json
-      - /volume1/docker/traefik/FileProvider/:/FileProvider/
+      # - /volume1/docker/traefik/FileProvider/:/FileProvider/
     restart: always
 
 
