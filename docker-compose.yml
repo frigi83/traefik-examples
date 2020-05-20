@@ -13,7 +13,7 @@ services:
     command:
       # - "--log.level=DEBUG"
       # - "--api.dashboard=true"
-      # - "--api.insecure=true"
+      # - "--api.insecure=false"
       - "--providers.file.directory=/FileProvider/"
       - "--providers.file.watch=true"
       - "--providers.docker=true"
