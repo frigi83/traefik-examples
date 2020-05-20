@@ -14,6 +14,7 @@ All this examples are based on traefik **version 2.x**.
 - **basic**: installation of traefik with SSL trough Let's Encrypt
 - **oauth**: use OAuth to protect a site with Google login
 - **fileprovider**: connect trough traefik a server not in docker
+- **dashboard**: dashboard connection with `api.insecure=false`
 
 
 ### Installing
@@ -23,6 +24,8 @@ All this examples are based on traefik **version 2.x**.
 2. In the root directory of this repo there is a variable file `var.env`. Download it and rename in `.env`. The most configurations options specific for your installation are in this file. You can copy it to every example you want to try.
 
 3. In the `docker-compose.yml` you find all the configuration to generate and configure the docker containers.
+
+4. In every example folder you find a `README.md` with a guide to the relative case.
 
 
 ### Files & Folders structure of examples
