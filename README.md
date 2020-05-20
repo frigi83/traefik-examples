@@ -9,6 +9,8 @@ In my network I need some services and the most are on `docker` but with the cha
 
 ### Examples
 
+All this examples are based on traefik **version 2.x**.
+
 - **basic**: installation of traefik with SSL trough Let's Encrypt
 - **oauth**: use OAuth to protect a site with Google login
 - **fileprovider**: connect trough traefik a server not in docker
