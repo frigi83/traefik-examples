@@ -1,3 +1,13 @@
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#
+#	USE A DOCKER-COMPOSE.YML IN THE EXAMPLE DIRECTORY
+#
+# THIS IS A WORKING FILE
+#
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
 version: '3.7'
 
 services:
@@ -287,6 +297,28 @@ services:
         # - "traefik.http.routers.oauth.rule=Host(`bisbino.${DOMAIN}`)"
         # - "traefik.http.routers.oauth.service=oauthService"
         # - "traefik.http.services.oauthService.loadBalancer.server.port=4181"
+
+
+# =============================================================
+#
+#	LANGUAGETOOL
+#
+# =============================================================
+
+  language:
+    image: erikvl87/languagetool
+    container_name: languagetool
+    environment:
+        - Java_Xms=512m
+        - Java_Xmx=2g
+    labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.language.entrypoints=web-secure"
+        - "traefik.http.routers.language.tls.certresolver=certificato"
+        - "traefik.http.routers.language.tls.domains[0].main=*.${DOMAIN}"
+        - "traefik.http.routers.language.rule=Host(`language.${DOMAIN}`)"
+        - "traefik.http.routers.language.service=languageService"
+        - "traefik.http.services.languageService.loadBalancer.server.port=8010"
 
 
 volumes:
