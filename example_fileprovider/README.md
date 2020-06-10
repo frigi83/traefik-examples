@@ -1,6 +1,6 @@
-# Traefik on Docker control access to external server
+# Traefik on Docker control access to an external server
 
-With the grove of app that have Docker container make the use of Traefik simple. But it can append that you have to redirect the traffic to an external server in the network and you can't work with docker label's.  
+With the grove of apps that have Docker container make the use of Traefik simple. But it can append that you have to redirect the traffic to an external server in the network and you can't work with docker labels.  
 
 
 ## Getting Started
@@ -9,41 +9,41 @@ With the grove of app that have Docker container make the use of Traefik simple.
 
 1. Read the `README.md` on the root folder.
 2. Configuration of DNS and SSL certificate like the example `basic`
-3. A website outside Docker environment.
+3. A website outside the Docker environment.
 
 ### Installing
 
-1. Add this lines to the Traefik definition in the `docker-compose.yml`. Where `/volume1/docker/traefik/FileProvider/` is a folder on your system that contain the dynamic configuration file for Traefik.
+1. Add these lines to the Traefik definition in the `docker-compose.yml`. Where `/volume1/docker/traefik/FileProvider/` is a folder on your system that contains the dynamic configuration file for Traefik.
 
 ```yaml
 command:
-  - "--providers.file.directory=/FileProvider/"
+  - "--providers.file.directory=/FileProvider/"
 volumes:
-  - /volume1/docker/traefik/FileProvider/:/FileProvider/  #this line
+  - /volume1/docker/traefik/FileProvider/:/FileProvider/  #this line
 ```
 
 2. In the directy `*/FileProvider/` create a file with file extension `.toml`, in this example is `file-provider.toml`.
 
 ```toml
 [http]
-  # Add the router
-  [http.routers]
-    [http.routers.plex]
-      entryPoints = ["web-secure"]
-      service = "service-plex"
-      rule = "Host(`site.example.org`)"     #change domain name
-      certresolver="certificato"
-      [[http.routers.plex.tls.domains]]
-        main = "*.example.org"              #change domain name
+  # Add the router
+  [http.routers]
+    [http.routers.plex]
+      entryPoints = ["web-secure"]
+      service = "service-plex"
+      rule = "Host(`site.example.org`)"     #change domain name
+      certresolver="certificato"
+      [[http.routers.plex.tls.domains]]
+        main = "*.example.org"              #change domain name
 
-  # Add the service
-    [http.services.service-plex]
-      [http.services.service-plex.loadBalancer]
-        [[http.services.service-plex.loadBalancer.servers]]
-          url = "https://192.168.1.123:32400"
+  # Add the service
+    [http.services.service-plex]
+      [http.services.service-plex.loadBalancer]
+        [[http.services.service-plex.loadBalancer.servers]]
+          url = "https://192.168.1.123:32400"
 ```
 
-3. Change this points in the `.toml` file:
+3. Change these points in the `.toml` file:
 
 * routers name
 * services name
@@ -51,7 +51,7 @@ volumes:
 * url destination (please make attention if you use http or https)
 
 
-4. Recreate the Traefik container and try in your browser if its works.
+4. Recreate the Traefik container and try in your browser if it works.
 
 ```bash
 docker-compose up -d reverse-proxy
