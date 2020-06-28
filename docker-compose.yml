@@ -78,13 +78,7 @@ services:
       - "traefik.http.routers.whoami.entrypoints=web-secure"
       - "traefik.http.routers.whoami.tls.certresolver=certificato"
       - "traefik.http.routers.whoami.tls.domains[0].main=*.${DOMAIN}"
-
-      # Oauth for whoami
-      - "traefik.http.routers.whoami.middlewares=whoamisecure"
-      - "traefik.http.middlewares.whoamisecure.forwardauth.address=http://oauth:4181"
-      - "traefik.http.middlewares.whoamisecure.forwardauth.authResponseHeaders=X-Forwarded-User"
-      - "traefik.http.middlewares.whoamisecure.forwardauth.authResponseHeaders=X-Auth-User, X-Secret"
-      - "traefik.http.middlewares.whoamisecure.forwardauth.trustForwardHeader=true"
+      - 'traefik.http.routers.whoami.middlewares=authelia@docker'
 
 
 
@@ -132,13 +126,7 @@ services:
       - "traefik.http.routers.grafana.tls.domains[0].main=*.${DOMAIN}"
       - "traefik.http.routers.grafana.service=grafanaService"
       - "traefik.http.services.grafanaService.loadBalancer.server.port=3000"
-
-      # Oauth for grafana
-      - "traefik.http.routers.grafana.middlewares=GrafanaMdl"
-      - "traefik.http.middlewares.GrafanaMdl.forwardauth.address=http://oauth:4181"
-      - "traefik.http.middlewares.GrafanaMdl.forwardauth.authResponseHeaders=X-Forwarded-User"
-      - "traefik.http.middlewares.GrafanaMdl.forwardauth.authResponseHeaders=X-Auth-User, X-Secret"
-      - "traefik.http.middlewares.GrafanaMdl.forwardauth.trustForwardHeader=true"
+      - 'traefik.http.routers.grafana.middlewares=authelia@docker'
 
     environment:
       - GF_SERVER_ROOT_URL=https://pm8.${DOMAIN}
@@ -149,13 +137,13 @@ services:
       - GF_SMTP_PASSWORD=${GF_SMTP_PASSWORD}
       - GF_SMTP_FROM_ADDRESS=${GF_SMTP_FROM_ADDRESS}
       - GF_SMTP_FROM_NAME=${GF_SMTP_FROM_NAME}
-      # - GF_USERS_ALLOW_SIGN_UP=true
-      # - GF_USERS_ASSIGN_ORG=true
-      # - GF_USERS_ASSIGN_ORG_ROLE=Editor
-      # - GF_AUTH_PROXY_ENABLED=true
-      # - GF_AUTH_PROXY_HEADER_NAME=X-Auth-User
-      # - GF_AUTH_PROXY_HEADER_PROPERTY=usename
-      # - GF_AUTH_PROXY_AUTO_SIGN_UP=true
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_USERS_ASSIGN_ORG=true
+      - GF_USERS_ASSIGN_ORG_ROLE=Editor
+      - GF_AUTH_PROXY_ENABLED=true
+      - GF_AUTH_PROXY_HEADER_NAME=Remote-User
+      - GF_AUTH_PROXY_HEADER_PROPERTY=username
+      - GF_AUTH_PROXY_AUTO_SIGN_UP=true
 
     restart: always
 
@@ -212,8 +200,9 @@ services:
       - "traefik.http.routers.noderedS.tls.certresolver=certificato"
       - "traefik.http.routers.noderedS.tls.domains[0].main=*.${DOMAIN}"
       - "traefik.http.routers.noderedS.service=noderedService"
-      - "traefik.http.routers.noderedS.middlewares=noderedMdlS"
-      - "traefik.http.middlewares.noderedMdlS.basicauth.users=${BASIC_AUTH}"
+      # - "traefik.http.routers.noderedS.middlewares=noderedMdlS"
+      # - "traefik.http.middlewares.noderedMdlS.basicauth.users=${BASIC_AUTH}"
+      - 'traefik.http.routers.noderedS.middlewares=authelia@docker'
       - "traefik.http.services.noderedService.loadBalancer.server.port=1880"
     restart: always
 
@@ -289,6 +278,7 @@ services:
         - LIFETIME=604800
         # - COOKIE_DOMAIN=${DOMAIN}
         - LOG_LEVEL=debug
+    restart: unless-stopped
     # labels:
         # - "traefik.enable=true"
         # - "traefik.http.routers.oauth.entrypoints=web-secure"
@@ -319,6 +309,65 @@ services:
         - "traefik.http.routers.language.rule=Host(`language.${DOMAIN}`)"
         - "traefik.http.routers.language.service=languageService"
         - "traefik.http.services.languageService.loadBalancer.server.port=8010"
+
+
+# =============================================================
+#
+#	STACKEDIT
+#
+# =============================================================
+
+  stackedit:
+    image: qmcgaw/stackedit
+    container_name: stackedit
+    environment:
+      - LISTENING_PORT=8000
+      - ROOT_URL=/
+      - USER_BUCKET_NAME=stackedit-users
+      - PAYPAL_RECEIVER_EMAIL=
+      - DROPBOX_APP_KEY=
+      - DROPBOX_APP_KEY_FULL=
+      - GITHUB_CLIENT_ID=
+      - GITHUB_CLIENT_SECRET=
+      - GOOGLE_CLIENT_ID=
+      - GOOGLE_API_KEY=_
+      - WORDPRESS_CLIENT_ID=
+    labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.stackedit.entrypoints=web-secure"
+        - "traefik.http.routers.stackedit.tls.certresolver=certificato"
+        - "traefik.http.routers.stackedit.tls.domains[0].main=*.${DOMAIN}"
+        - "traefik.http.routers.stackedit.rule=Host(`edit.${DOMAIN}`)"
+        - "traefik.http.routers.stackedit.service=stackeditService"
+        - "traefik.http.services.stackeditService.loadBalancer.server.port=8000"
+
+# =============================================================
+#
+#	AUTHELIA
+#
+# =============================================================
+
+  authelia:
+    image: authelia/authelia
+    container_name: authelia
+    volumes:
+      - /volume1/docker/authelia:/config
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.authelia.rule=Host(`login.${DOMAIN}`)'
+      - 'traefik.http.routers.authelia.entrypoints=web-secure'
+      - 'traefik.http.routers.authelia.tls=true'
+      - "traefik.http.routers.authelia.tls.certresolver=certificato"
+      - "traefik.http.routers.authelia.tls.domains[0].main=*.${DOMAIN}"
+      - 'traefik.http.middlewares.authelia.forwardauth.address=http://authelia:9091/api/verify?rd=https://login.${DOMAIN}/'
+      - 'traefik.http.middlewares.authelia.forwardauth.trustForwardHeader=true'
+      - 'traefik.http.middlewares.authelia.forwardauth.authResponseHeaders=Remote-User, Remote-Groups'
+    # ports:
+    #   - 9091:9091
+    restart: unless-stopped
+    environment:
+      - TZ=Europe/Bern
+
 
 
 volumes:
