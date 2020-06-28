@@ -1,0 +1,13 @@
+###############################################################
+#                         Users Database                      #
+###############################################################
+
+# List of users
+users:
+  myuser:
+    displayname: "My name si Bond"
+    password: "$6$0I/4ctJaEXOH1t4R$7lRmmaUsjJoP7hcRwY42he6kf947SGBZPqyUPie7Ruwy0GldHDGkmXsZwXIpKUHf3HPx3r/gDqDQsXTof1xmJ1"
+    email: 007@example.com
+    groups:
+      - admins
+      - dev
