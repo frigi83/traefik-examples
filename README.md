@@ -15,6 +15,7 @@ All this examples are based on traefik **version 2.x**.
 - **oauth**: use OAuth to protect a site with Google login
 - **fileprovider**: connect trough traefik a server not in docker
 - **dashboard**: dashboard connection with `api.insecure=false`
+- **authelia**: SSO and 2FA with a local server
 
 
 ### Installing
