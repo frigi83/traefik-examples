@@ -19,7 +19,8 @@ services:
 # =============================================================
 
   reverse-proxy:
-    image: traefik:latest
+    image: traefik:v2.2.1
+    container_name: reverse-proxy
     command:
       # - "--log.level=DEBUG"
       # - "--api.dashboard=true"
@@ -81,7 +82,6 @@ services:
       - 'traefik.http.routers.whoami.middlewares=authelia@docker'
 
 
-
 # =============================================================
 
 #	PORTAINER
@@ -93,6 +93,8 @@ services:
     container_name: portainer
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - 9000:9000
     labels:
       #	HTTPS traffic
       - "traefik.enable=true"
@@ -115,7 +117,9 @@ services:
     image: grafana/grafana
     container_name: grafana
     volumes:
-      - grafana-storage:/var/lib/grafana
+      # - grafana-storage:/var/lib/grafana
+      - /volume1/docker/grafana/data:/var/lib/grafana
+      # - /volume1/docker/grafana/log:/var/log/grafana
     labels:
       #	HTTPS traffic
       - "traefik.enable=true"
@@ -179,6 +183,7 @@ services:
       - INFLUXDB_ADMIN_PASSWORD=${INFLUXDB_ADMIN_PASSWORD}
 
 
+
 # =============================================================
 #
 #	NODERED
@@ -186,11 +191,12 @@ services:
 # =============================================================
 
   nodered:
-    image: nodered/node-red-docker
+    image: nodered/node-red
     container_name: nodered
     volumes:
-      - nodered-storage:/data
-      - /volume1/docker/nodered/settings.js:/data/settings.js
+      # - nodered-storage:/data
+      # - /volume1/docker/nodered/conifg/settings.js:/data/settings.js
+      - /volume1/docker/nodered/dati:/data/
     labels:
       #	HTTPS traffic
       - "traefik.enable=true"
@@ -207,33 +213,6 @@ services:
     restart: always
 
 
-# =============================================================
-#
-#	UNIFI CONTROLLER
-#
-# =============================================================
-
-  unifi:
-    image: jacobalberty/unifi
-    container_name: unifi
-    volumes:
-      - /volume1/docker/unifi/data:/unifi/data
-    ports:
-      - 10001:10001/udp
-      - 3478:3478/udp
-      - 8080:8080
-    labels:
-      #	HTTPS traffic
-      - "traefik.enable=true"
-      - "traefik.http.routers.unifiS.rule=Host(`controller.${DOMAIN}`)"
-      - "traefik.http.routers.unifiS.entrypoints=web-secure"
-      - "traefik.http.routers.unifiS.tls=true"
-      - "traefik.http.routers.unifiS.tls.certresolver=certificato"
-      - "traefik.http.routers.unifiS.tls.domains[0].main=*.${DOMAIN}"
-      - "traefik.http.routers.unifiS.service=UnifiService"
-      - "traefik.http.services.UnifiService.loadBalancer.server.port=8443"
-      - "traefik.http.services.UnifiService.loadbalancer.server.scheme=https"
-    restart: always
 
 
 # =============================================================
@@ -258,88 +237,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
 
 
-# =============================================================
-#
-#	OAUTH
-#
-# =============================================================
 
-  oauth:
-    image: thomseddon/traefik-forward-auth
-    container_name: oauth
-    environment:
-        # These Variables are injected via environment file
-        - PROVIDERS_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-        - PROVIDERS_GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-        - SECRET=${OAUTH_SECRET}
-        - WHITELIST=${WHITELIST}
-        - DOMAIN=${DOMAIN}
-        - AUTH_HOST=bisbino.${DOMAIN}
-        - LIFETIME=604800
-        # - COOKIE_DOMAIN=${DOMAIN}
-        - LOG_LEVEL=debug
-    restart: unless-stopped
-    # labels:
-        # - "traefik.enable=true"
-        # - "traefik.http.routers.oauth.entrypoints=web-secure"
-        # - "traefik.http.routers.oauth.tls.certresolver=certificato"
-        # - "traefik.http.routers.oauth.tls.domains[0].main=*.${DOMAIN}"
-        # - "traefik.http.routers.oauth.rule=Host(`bisbino.${DOMAIN}`)"
-        # - "traefik.http.routers.oauth.service=oauthService"
-        # - "traefik.http.services.oauthService.loadBalancer.server.port=4181"
-
-
-# =============================================================
-#
-#	LANGUAGETOOL
-#
-# =============================================================
-
-  language:
-    image: erikvl87/languagetool
-    container_name: languagetool
-    environment:
-        - Java_Xms=512m
-        - Java_Xmx=2g
-    labels:
-        - "traefik.enable=true"
-        - "traefik.http.routers.language.entrypoints=web-secure"
-        - "traefik.http.routers.language.tls.certresolver=certificato"
-        - "traefik.http.routers.language.tls.domains[0].main=*.${DOMAIN}"
-        - "traefik.http.routers.language.rule=Host(`language.${DOMAIN}`)"
-        - "traefik.http.routers.language.service=languageService"
-        - "traefik.http.services.languageService.loadBalancer.server.port=8010"
-
-
-# =============================================================
-#
-#	STACKEDIT
-#
-# =============================================================
-
-  stackedit:
-    image: qmcgaw/stackedit
-    container_name: stackedit
-    environment:
-      - LISTENING_PORT=8000
-      - ROOT_URL=/
-      - USER_BUCKET_NAME=stackedit-users
-      - PAYPAL_RECEIVER_EMAIL=
-      - DROPBOX_APP_KEY=
-      - DROPBOX_APP_KEY_FULL=
-      - GITHUB_CLIENT_ID=
-      - GITHUB_CLIENT_SECRET=
-      - GOOGLE_CLIENT_ID=
-      - GOOGLE_API_KEY=_
-      - WORDPRESS_CLIENT_ID=
-    labels:
-        - "traefik.enable=true"
-        - "traefik.http.routers.stackedit.entrypoints=web-secure"
-        - "traefik.http.routers.stackedit.tls.certresolver=certificato"
-        - "traefik.http.routers.stackedit.tls.domains[0].main=*.${DOMAIN}"
-        - "traefik.http.routers.stackedit.rule=Host(`edit.${DOMAIN}`)"
-        - "traefik.http.routers.stackedit.service=stackeditService"
-        - "traefik.http.services.stackeditService.loadBalancer.server.port=8000"
 
 # =============================================================
 #
@@ -366,9 +264,95 @@ services:
     #   - 9091:9091
     restart: unless-stopped
     environment:
-      - TZ=Europe/Bern
+      - TZ=${TIME_ZONE}
 
 
+# =============================================================
+#
+#	UNIFI CONTROLLER
+#
+# =============================================================
+
+  unifi:
+    image: goofball222/unifi
+    container_name: unifi
+    volumes:
+      - /volume1/docker/unifi/data:/usr/lib/unifi/data
+      - /volume1/docker/unifi/logs:/usr/lib/unifi/logs
+    ports:
+      - 10001:10001/udp
+      - 3478:3478/udp
+      - 8080:8080
+    labels:
+      #	HTTPS traffic
+      - "traefik.enable=true"
+      - "traefik.http.routers.unifiS.rule=Host(`controller.${DOMAIN}`)"
+      - "traefik.http.routers.unifiS.entrypoints=web-secure"
+      - "traefik.http.routers.unifiS.tls=true"
+      - "traefik.http.routers.unifiS.tls.certresolver=certificato"
+      - "traefik.http.routers.unifiS.tls.domains[0].main=*.${DOMAIN}"
+      - "traefik.http.routers.unifiS.service=UnifiService"
+      - "traefik.http.services.UnifiService.loadBalancer.server.port=8443"
+      - "traefik.http.services.UnifiService.loadbalancer.server.scheme=https"
+    environment:
+      - TZ=UTC
+      - JVM_INIT_HEAP_SIZE=256M
+      - JVM_MAX_HEAP_SIZE=512M
+    restart: always
+
+# =============================================================
+#
+#	HOME ASSISTANT
+#
+# =============================================================
+
+  home-assistant:
+    image: homeassistant/home-assistant:stable
+    container_name: home-assistant
+    volumes:
+      - /volume1/docker/home-assistant:/config
+      - /etc/localtime:/etc/localtime:ro
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.homeaut.rule=Host(`bosco.${DOMAIN}`)'
+      - 'traefik.http.routers.homeaut.entrypoints=web-secure'
+      - 'traefik.http.routers.homeaut.tls=true'
+      - "traefik.http.routers.homeaut.tls.certresolver=certificato"
+      - "traefik.http.routers.homeaut.tls.domains[0].main=*.${DOMAIN}"
+      - "traefik.http.routers.homeaut.service=homeautService"
+      - "traefik.http.services.homeautService.loadBalancer.server.port=8123"
+    # ports:
+    #   - 9091:9091
+    restart: unless-stopped
+    environment:
+      - TZ=${TIME_ZONE}
+
+# =============================================================
+#
+#	MOSQUITTO
+#
+# =============================================================
+
+  # mosquitto:
+  #   image: homeassistant/home-assistant:stable
+  #   container_name: home-assistant
+  #   volumes:
+  #     - /volume1/docker/home-assistant:/config
+  #     - /etc/localtime:/etc/localtime:ro
+  #   labels:
+  #     - 'traefik.enable=true'
+  #     - 'traefik.http.routers.homeaut.rule=Host(`bosco.${DOMAIN}`)'
+  #     - 'traefik.http.routers.homeaut.entrypoints=web-secure'
+  #     - 'traefik.http.routers.homeaut.tls=true'
+  #     - "traefik.http.routers.homeaut.tls.certresolver=certificato"
+  #     - "traefik.http.routers.homeaut.tls.domains[0].main=*.${DOMAIN}"
+  #     - "traefik.http.routers.homeaut.service=homeautService"
+  #     - "traefik.http.services.homeautService.loadBalancer.server.port=8123"
+  #   # ports:
+  #   #   - 9091:9091
+  #   restart: unless-stopped
+  #   environment:
+  #     - TZ=${TIME_ZONE}
 
 volumes:
 
