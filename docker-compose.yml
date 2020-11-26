@@ -19,11 +19,11 @@ services:
 # =============================================================
 
   reverse-proxy:
-    image: traefik:v2.2.1
+    image: traefik:latest
     container_name: reverse-proxy
     command:
       # - "--log.level=DEBUG"
-      # - "--api.dashboard=true"
+      - "--api.dashboard=true"
       # - "--api.insecure=false"
       - "--providers.file.directory=/FileProvider/"
       - "--providers.file.watch=true"
@@ -33,6 +33,7 @@ services:
       - "--entrypoints.web.http.redirections.entryPoint.to=web-secure"
       - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
       - "--entrypoints.web-secure.address=:443"
+      # - "--entryPoints.tcpep.address=:1883"
       - "--serverstransport.insecureskipverify=true"
       - "--certificatesresolvers.certificato.acme.dnschallenge=true"
       - "--certificatesresolvers.certificato.acme.dnschallenge.provider=cloudflare"
@@ -47,16 +48,17 @@ services:
       CLOUDFLARE_EMAIL: ${CLOUDFLARE_EMAIL}
       CLOUDFLARE_API_KEY: ${CLOUDFLARE_API_KEY}
     container_name: traefik
-    # labels:
-    #   - "traefik.enable=true"
-    #   - "traefik.http.routers.api.rule=Host(`traefik.${DOMAIN}`)"
-    #   - "traefik.http.routers.api.entrypoints=web-secure"
-    #   - "traefik.http.routers.api.tls.certresolver=certificato"
-    #   - "traefik.http.routers.api.tls.domains[0].main=*.${DOMAIN}"
-    #   - "traefik.http.routers.api.service=api@internal"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`traefik.${DOMAIN}`)"
+      - "traefik.http.routers.api.entrypoints=web-secure"
+      - "traefik.http.routers.api.tls.certresolver=certificato"
+      - "traefik.http.routers.api.tls.domains[0].main=*.${DOMAIN}"
+      - "traefik.http.routers.api.service=api@internal"
     ports:
       - 80:80
       - 443:443
+      # - 1883:1883
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock  # So that Traefik can listen to the Docker events
       - /volume1/docker/traefik/acme.json:/acme.json
@@ -327,32 +329,64 @@ services:
     environment:
       - TZ=${TIME_ZONE}
 
+
+# =============================================================
+#
+#	PI HOLE
+#
+# =============================================================
+
+  pihole:
+    container_name: pihole
+    image: pihole/pihole:latest
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+    environment:
+      TZ: ${TIME_ZONE}
+      WEBPASSWORD: '${PI_HOLE_PASSWORD}'
+    # Volumes store your data between container upgrades
+    volumes:
+      - '/volume1/docker/pihole/pihole/:/etc/pihole/'
+      - '/volume1/docker/pihole/dnsmasq.d/:/etc/dnsmasq.d/'
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.homeaut.rule=Host(`pihole.${DOMAIN}`)'
+      - 'traefik.http.routers.homeaut.entrypoints=web-secure'
+      - 'traefik.http.routers.homeaut.tls=true'
+      - "traefik.http.routers.homeaut.tls.certresolver=certificato"
+      - "traefik.http.routers.homeaut.tls.domains[0].main=*.${DOMAIN}"
+      - "traefik.http.routers.homeaut.service=homeautService"
+      - "traefik.http.services.homeautService.loadBalancer.server.port=80"
+    restart: unless-stopped
+
 # =============================================================
 #
 #	MOSQUITTO
 #
 # =============================================================
 
-  # mosquitto:
-  #   image: homeassistant/home-assistant:stable
-  #   container_name: home-assistant
-  #   volumes:
-  #     - /volume1/docker/home-assistant:/config
-  #     - /etc/localtime:/etc/localtime:ro
-  #   labels:
-  #     - 'traefik.enable=true'
-  #     - 'traefik.http.routers.homeaut.rule=Host(`bosco.${DOMAIN}`)'
-  #     - 'traefik.http.routers.homeaut.entrypoints=web-secure'
-  #     - 'traefik.http.routers.homeaut.tls=true'
-  #     - "traefik.http.routers.homeaut.tls.certresolver=certificato"
-  #     - "traefik.http.routers.homeaut.tls.domains[0].main=*.${DOMAIN}"
-  #     - "traefik.http.routers.homeaut.service=homeautService"
-  #     - "traefik.http.services.homeautService.loadBalancer.server.port=8123"
-  #   # ports:
-  #   #   - 9091:9091
-  #   restart: unless-stopped
-  #   environment:
-  #     - TZ=${TIME_ZONE}
+  mosquitto:
+    image: eclipse-mosquitto
+    container_name: mqtt
+    volumes:
+      - /volume1/docker/mosquitto/config:/mosquitto/config
+      - /volume1/docker/mosquitto/data:/mosquitto/data
+      # - /volume1/docker/mosquitto/log:/mosquitto/log
+    # labels:
+    #   - 'traefik.enable=true'
+    #   # - 'traefik.tcp.routers.mqtt.rule=HostSNI(`mqtt.${DOMAIN}`)'
+    #   - 'traefik.tcp.routers.mqtt.entrypoints=tcpep'
+    #   # - 'traefik.tcp.routers.mqtt.tls=true'
+    #   # - "traefik.tcp.routers.mqtt.tls.certresolver=certificato"
+    #   # - "traefik.tcp.routers.mqtt.tls.domains[0].main=*.${DOMAIN}"
+    #   - "traefik.tcp.routers.mqtt.service=mqttService"
+    #   - "traefik.tcp.services.mqttService.loadBalancer.server.port=1883"
+    ports:
+      - 1883:1883
+    restart: unless-stopped
+    # environment:
+    #   - TZ=${TIME_ZONE}
 
 volumes:
 
