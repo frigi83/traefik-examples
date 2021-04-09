@@ -17,6 +17,7 @@ All this examples are based on traefik **version 2.x**.
 - **dashboard**: dashboard connection with `api.insecure=false`
 - **authelia**: SSO and 2FA with a local server
 - **tcp**: TCP entry point for non HTTP services
+- **mTLS**: securing services with mutual TLS (mTLS)
 
 
 ### Installing
