@@ -22,7 +22,7 @@ services:
     image: traefik:latest
     container_name: reverse-proxy
     command:
-      #- "--log.level=DEBUG"
+      # - "--log.level=DEBUG"
       - "--api.dashboard=true"
       # - "--api.insecure=false"
       - "--providers.file.directory=/FileProvider/"
@@ -33,7 +33,7 @@ services:
       - "--entrypoints.web.http.redirections.entryPoint.to=web-secure"
       - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
       - "--entrypoints.web-secure.address=:443"
-      # - "--entryPoints.tcpep.address=:12222"
+      # - "--entryPoints.tcpep.address=:1883"
       - "--serverstransport.insecureskipverify=true"
       - "--certificatesresolvers.certificato.acme.dnschallenge=true"
       - "--certificatesresolvers.certificato.acme.dnschallenge.provider=cloudflare"
@@ -84,7 +84,6 @@ services:
       - "traefik.http.routers.whoami.tls.domains[0].main=*.${DOMAIN}"
       - "traefik.http.routers.whoami.tls.options=myTLSOptions@file"
       #- 'traefik.http.routers.whoami.middlewares=authelia@docker'
-
 
 # =============================================================
 
@@ -188,6 +187,7 @@ services:
       - INFLUXDB_ADMIN_PASSWORD=${INFLUXDB_ADMIN_PASSWORD}
 
 
+
 # =============================================================
 #
 #	INFLUXDB HOME ASSISTANT
@@ -247,6 +247,7 @@ services:
       - 'traefik.http.routers.noderedS.middlewares=authelia@docker'
       - "traefik.http.services.noderedService.loadBalancer.server.port=1880"
     restart: always
+
 
 
 
@@ -371,6 +372,8 @@ services:
 
 
 
+
+
 # =============================================================
 #
 #	MOSQUITTO
@@ -468,6 +471,7 @@ services:
       - "traefik.http.routers.lighttpd.service=lighttpdService"
       - "traefik.http.services.lighttpdService.loadBalancer.server.port=80"
     tty: true
+
 
 
 # =============================================================

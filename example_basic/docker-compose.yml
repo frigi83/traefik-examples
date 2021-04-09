@@ -166,11 +166,10 @@ services:
 # =============================================================
 
   nodered:
-    image: nodered/node-red-docker
+    image: nodered/node-red
     container_name: nodered
     volumes:
-      - nodered-storage:/data
-      - /volume1/docker/nodered/settings.js:/data/settings.js
+      - /volume1/docker/nodered:/data
     labels:
       #	HTTPS traffic
       - "traefik.enable=true"
@@ -242,5 +241,3 @@ services:
 volumes:
 
   grafana-storage:
-
-  nodered-storage:

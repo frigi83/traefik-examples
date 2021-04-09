@@ -16,6 +16,7 @@ All this examples are based on traefik **version 2.x**.
 - **fileprovider**: connect trough traefik a server not in docker
 - **dashboard**: dashboard connection with `api.insecure=false`
 - **authelia**: SSO and 2FA with a local server
+- **tcp**: TCP entry point for non HTTP services
 
 
 ### Installing
