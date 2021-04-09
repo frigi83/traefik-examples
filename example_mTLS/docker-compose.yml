@@ -1,0 +1,72 @@
+version: '3.7'
+
+services:
+
+# =============================================================
+#
+#	TRAEFIK - reverse proxy
+#
+# =============================================================
+
+  reverse-proxy:
+    image: traefik:latest
+    command:
+      # - "--log.level=DEBUG"
+      # - "--api.dashboard=true"
+      # - "--api.insecure=true"
+      - "--providers.file.directory=/FileProvider/"
+      - "--providers.file.watch=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entryPoint.to=web-secure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--entrypoints.web-secure.address=:443"
+      - "--serverstransport.insecureskipverify=true"
+      - "--certificatesresolvers.certificato.acme.dnschallenge=true"
+      - "--certificatesresolvers.certificato.acme.dnschallenge.provider=cloudflare"
+      - "--certificatesresolvers.certificato.acme.dnschallenge.delaybeforecheck=10"
+      - "--certificatesresolvers.certificato.acme.dnschallenge.resolvers=1.1.1.1:53"
+      - "--certificatesresolvers.certificato.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
+      - "--certificatesresolvers.certificato.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.certificato.acme.storage=acme.json"
+    environment:
+      CF_API_EMAIL: ${CF_API_EMAIL}
+      CF_API_KEY: ${CF_API_KEY}
+      CLOUDFLARE_EMAIL: ${CLOUDFLARE_EMAIL}
+      CLOUDFLARE_API_KEY: ${CLOUDFLARE_API_KEY}
+    container_name: traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`traefik.${DOMAIN}`)"
+      - "traefik.http.routers.api.entrypoints=web-secure"
+      - "traefik.http.routers.api.tls.certresolver=certificato"
+      - "traefik.http.routers.api.tls.domains[0].main=*.${DOMAIN}"
+      - "traefik.http.routers.api.service=api@internal"
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock  # So that Traefik can listen to the Docker events
+      - /volume1/docker/traefik/acme.json:/acme.json
+      - /volume1/docker/traefik/FileProvider/:/FileProvider/
+      - /volume1/docker/traefik/cert/client.crt:/client.crt:ro
+    restart: always
+
+
+# =============================================================
+#
+#	WHOAMI - test webserver
+#
+# =============================================================
+
+  whoami:
+    image: containous/whoami
+    container_name: whoami
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.whoami.rule=Host(`whoami.${DOMAIN}`)"
+      - "traefik.http.routers.whoami.entrypoints=web-secure"
+      - "traefik.http.routers.whoami.tls.certresolver=certificato"
+      - "traefik.http.routers.whoami.tls.domains[0].main=*.${DOMAIN}"
+      - "traefik.http.routers.whoami.tls.options=myTLSOptions@file"
