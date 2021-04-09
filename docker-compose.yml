@@ -20,9 +20,10 @@ services:
 
   reverse-proxy:
     image: traefik:latest
+    container_name: reverse-proxy
     command:
-      # - "--log.level=DEBUG"
-      # - "--api.dashboard=true"
+      #- "--log.level=DEBUG"
+      - "--api.dashboard=true"
       # - "--api.insecure=false"
       - "--providers.file.directory=/FileProvider/"
       - "--providers.file.watch=true"
@@ -32,6 +33,7 @@ services:
       - "--entrypoints.web.http.redirections.entryPoint.to=web-secure"
       - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
       - "--entrypoints.web-secure.address=:443"
+      # - "--entryPoints.tcpep.address=:12222"
       - "--serverstransport.insecureskipverify=true"
       - "--certificatesresolvers.certificato.acme.dnschallenge=true"
       - "--certificatesresolvers.certificato.acme.dnschallenge.provider=cloudflare"
@@ -46,20 +48,22 @@ services:
       CLOUDFLARE_EMAIL: ${CLOUDFLARE_EMAIL}
       CLOUDFLARE_API_KEY: ${CLOUDFLARE_API_KEY}
     container_name: traefik
-    # labels:
-    #   - "traefik.enable=true"
-    #   - "traefik.http.routers.api.rule=Host(`traefik.${DOMAIN}`)"
-    #   - "traefik.http.routers.api.entrypoints=web-secure"
-    #   - "traefik.http.routers.api.tls.certresolver=certificato"
-    #   - "traefik.http.routers.api.tls.domains[0].main=*.${DOMAIN}"
-    #   - "traefik.http.routers.api.service=api@internal"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`traefik.${DOMAIN}`)"
+      - "traefik.http.routers.api.entrypoints=web-secure"
+      - "traefik.http.routers.api.tls.certresolver=certificato"
+      - "traefik.http.routers.api.tls.domains[0].main=*.${DOMAIN}"
+      - "traefik.http.routers.api.service=api@internal"
     ports:
       - 80:80
       - 443:443
+      # - 1883:1883
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock  # So that Traefik can listen to the Docker events
       - /volume1/docker/traefik/acme.json:/acme.json
       - /volume1/docker/traefik/FileProvider/:/FileProvider/
+      - /volume1/docker/traefik/cert/client.crt:/client.crt:ro
     restart: always
 
 
@@ -78,8 +82,8 @@ services:
       - "traefik.http.routers.whoami.entrypoints=web-secure"
       - "traefik.http.routers.whoami.tls.certresolver=certificato"
       - "traefik.http.routers.whoami.tls.domains[0].main=*.${DOMAIN}"
-      - 'traefik.http.routers.whoami.middlewares=authelia@docker'
-
+      - "traefik.http.routers.whoami.tls.options=myTLSOptions@file"
+      #- 'traefik.http.routers.whoami.middlewares=authelia@docker'
 
 
 # =============================================================
@@ -89,10 +93,13 @@ services:
 # =============================================================
 
   portainer:
-    image: portainer/portainer
+    image: portainer/portainer-ce
     container_name: portainer
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - /volume1/docker/portainer:/data
+    ports:
+      - 9000:9000
     labels:
       #	HTTPS traffic
       - "traefik.enable=true"
@@ -101,6 +108,7 @@ services:
       - "traefik.http.routers.portainerS.tls=true"
       - "traefik.http.routers.portainerS.tls.certresolver=certificato"
       - "traefik.http.routers.portainerS.tls.domains[0].main=*.${DOMAIN}"
+      #- "traefik.http.routers.portainerS.tls.options=myTLSOptions@file"
       - "traefik.http.routers.portainerS.service=portainerService"
       - "traefik.http.services.portainerService.loadBalancer.server.port=9000"
 
@@ -115,7 +123,7 @@ services:
     image: grafana/grafana
     container_name: grafana
     volumes:
-      - grafana-storage:/var/lib/grafana
+      - /volume1/docker/grafana/data:/var/lib/grafana
     labels:
       #	HTTPS traffic
       - "traefik.enable=true"
@@ -124,9 +132,10 @@ services:
       - "traefik.http.routers.grafana.tls=true"
       - "traefik.http.routers.grafana.tls.certresolver=certificato"
       - "traefik.http.routers.grafana.tls.domains[0].main=*.${DOMAIN}"
+      - "traefik.http.routers.grafana.tls.options=myTLSOptions@file"
       - "traefik.http.routers.grafana.service=grafanaService"
       - "traefik.http.services.grafanaService.loadBalancer.server.port=3000"
-      - 'traefik.http.routers.grafana.middlewares=authelia@docker'
+      #- 'traefik.http.routers.grafana.middlewares=authelia@docker'
 
     environment:
       - GF_SERVER_ROOT_URL=https://pm8.${DOMAIN}
@@ -155,7 +164,7 @@ services:
 # =============================================================
 
   influx:
-    image: influxdb
+    image: influxdb:1.8
     container_name: influx
     volumes:
       - /volume1/docker/pm8_data:/var/lib/influxdb
@@ -181,16 +190,48 @@ services:
 
 # =============================================================
 #
+#	INFLUXDB HOME ASSISTANT
+#
+# =============================================================
+
+  influxdb-ha:
+    image: quay.io/influxdb/influxdb:v2.0.4
+    container_name: influx-ha
+    volumes:
+      - /volume1/docker/influxdb-ha/data:/root/.influxdbv2
+      #- /volume1/docker/influxdb-ha/config:/etc/influxdb2
+    #ports:
+    #  - 8086:8086
+    labels:
+      #	HTTPS traffic
+      - "traefik.enable=true"
+      - "traefik.http.routers.influxdbHAS.rule=Host(`influxdb-ha.${DOMAIN}`)"
+      - "traefik.http.routers.influxdbHAS.entrypoints=web-secure"
+      - "traefik.http.routers.influxdbHAS.tls=true"
+      - "traefik.http.routers.influxdbHAS.tls.certresolver=certificato"
+      - "traefik.http.routers.influxdbHAS.tls.domains[0].main=*.${DOMAIN}"
+      - "traefik.http.routers.influxdbHAS.service=influxdbHAService"
+      - "traefik.http.services.influxdbHAService.loadBalancer.server.port=8086"
+    restart: always
+    #environment:
+      #- DOCKER_INFLUXDB_INIT_MODE=setup
+      #- DOCKER_INFLUXDB_INIT_USERNAME=${INFLUXDB_HA_USER}
+      #- DOCKER_INFLUXDB_INIT_PASSWORD=${INFLUXDB_HA_PASSWORD}
+      #- DOCKER_INFLUXDB_INIT_ORG=${INFLUXDB_HA_ORG}
+      #- DOCKER_INFLUXDB_INIT_BUCKET=${INFLUXDB_HA_BUCKET}
+      #- DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${INFLUXDB_HA_TOKEN}
+
+# =============================================================
+#
 #	NODERED
 #
 # =============================================================
 
   nodered:
-    image: nodered/node-red-docker
+    image: nodered/node-red
     container_name: nodered
     volumes:
-      - nodered-storage:/data
-      - /volume1/docker/nodered/settings.js:/data/settings.js
+      - /volume1/docker/nodered/dati:/data/
     labels:
       #	HTTPS traffic
       - "traefik.enable=true"
@@ -199,6 +240,7 @@ services:
       - "traefik.http.routers.noderedS.tls=true"
       - "traefik.http.routers.noderedS.tls.certresolver=certificato"
       - "traefik.http.routers.noderedS.tls.domains[0].main=*.${DOMAIN}"
+      - "traefik.http.routers.noderedS.tls.options=myTLSOptions@file"
       - "traefik.http.routers.noderedS.service=noderedService"
       # - "traefik.http.routers.noderedS.middlewares=noderedMdlS"
       # - "traefik.http.middlewares.noderedMdlS.basicauth.users=${BASIC_AUTH}"
@@ -207,33 +249,6 @@ services:
     restart: always
 
 
-# =============================================================
-#
-#	UNIFI CONTROLLER
-#
-# =============================================================
-
-  unifi:
-    image: jacobalberty/unifi
-    container_name: unifi
-    volumes:
-      - /volume1/docker/unifi/data:/unifi/data
-    ports:
-      - 10001:10001/udp
-      - 3478:3478/udp
-      - 8080:8080
-    labels:
-      #	HTTPS traffic
-      - "traefik.enable=true"
-      - "traefik.http.routers.unifiS.rule=Host(`controller.${DOMAIN}`)"
-      - "traefik.http.routers.unifiS.entrypoints=web-secure"
-      - "traefik.http.routers.unifiS.tls=true"
-      - "traefik.http.routers.unifiS.tls.certresolver=certificato"
-      - "traefik.http.routers.unifiS.tls.domains[0].main=*.${DOMAIN}"
-      - "traefik.http.routers.unifiS.service=UnifiService"
-      - "traefik.http.services.UnifiService.loadBalancer.server.port=8443"
-      - "traefik.http.services.UnifiService.loadbalancer.server.scheme=https"
-    restart: always
 
 
 # =============================================================
@@ -258,88 +273,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
 
 
-# =============================================================
-#
-#	OAUTH
-#
-# =============================================================
 
-  oauth:
-    image: thomseddon/traefik-forward-auth
-    container_name: oauth
-    environment:
-        # These Variables are injected via environment file
-        - PROVIDERS_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-        - PROVIDERS_GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-        - SECRET=${OAUTH_SECRET}
-        - WHITELIST=${WHITELIST}
-        - DOMAIN=${DOMAIN}
-        - AUTH_HOST=bisbino.${DOMAIN}
-        - LIFETIME=604800
-        # - COOKIE_DOMAIN=${DOMAIN}
-        - LOG_LEVEL=debug
-    restart: unless-stopped
-    # labels:
-        # - "traefik.enable=true"
-        # - "traefik.http.routers.oauth.entrypoints=web-secure"
-        # - "traefik.http.routers.oauth.tls.certresolver=certificato"
-        # - "traefik.http.routers.oauth.tls.domains[0].main=*.${DOMAIN}"
-        # - "traefik.http.routers.oauth.rule=Host(`bisbino.${DOMAIN}`)"
-        # - "traefik.http.routers.oauth.service=oauthService"
-        # - "traefik.http.services.oauthService.loadBalancer.server.port=4181"
-
-
-# =============================================================
-#
-#	LANGUAGETOOL
-#
-# =============================================================
-
-  language:
-    image: erikvl87/languagetool
-    container_name: languagetool
-    environment:
-        - Java_Xms=512m
-        - Java_Xmx=2g
-    labels:
-        - "traefik.enable=true"
-        - "traefik.http.routers.language.entrypoints=web-secure"
-        - "traefik.http.routers.language.tls.certresolver=certificato"
-        - "traefik.http.routers.language.tls.domains[0].main=*.${DOMAIN}"
-        - "traefik.http.routers.language.rule=Host(`language.${DOMAIN}`)"
-        - "traefik.http.routers.language.service=languageService"
-        - "traefik.http.services.languageService.loadBalancer.server.port=8010"
-
-
-# =============================================================
-#
-#	STACKEDIT
-#
-# =============================================================
-
-  stackedit:
-    image: qmcgaw/stackedit
-    container_name: stackedit
-    environment:
-      - LISTENING_PORT=8000
-      - ROOT_URL=/
-      - USER_BUCKET_NAME=stackedit-users
-      - PAYPAL_RECEIVER_EMAIL=
-      - DROPBOX_APP_KEY=
-      - DROPBOX_APP_KEY_FULL=
-      - GITHUB_CLIENT_ID=
-      - GITHUB_CLIENT_SECRET=
-      - GOOGLE_CLIENT_ID=
-      - GOOGLE_API_KEY=_
-      - WORDPRESS_CLIENT_ID=
-    labels:
-        - "traefik.enable=true"
-        - "traefik.http.routers.stackedit.entrypoints=web-secure"
-        - "traefik.http.routers.stackedit.tls.certresolver=certificato"
-        - "traefik.http.routers.stackedit.tls.domains[0].main=*.${DOMAIN}"
-        - "traefik.http.routers.stackedit.rule=Host(`edit.${DOMAIN}`)"
-        - "traefik.http.routers.stackedit.service=stackeditService"
-        - "traefik.http.services.stackeditService.loadBalancer.server.port=8000"
 
 # =============================================================
 #
@@ -366,12 +300,204 @@ services:
     #   - 9091:9091
     restart: unless-stopped
     environment:
-      - TZ=Europe/Bern
+      - TZ=${TIME_ZONE}
+
+
+# =============================================================
+#
+#	UNIFI CONTROLLER
+#
+# =============================================================
+
+  unifi:
+    image: linuxserver/unifi-controller
+    container_name: unifi
+    volumes:
+      - /volume1/docker/unifi/data:/config
+    ports:
+      - 10001:10001/udp
+      - 3478:3478/udp
+      - 8080:8080
+    labels:
+      #	HTTPS traffic
+      - "traefik.enable=true"
+      - "traefik.http.routers.unifiS.rule=Host(`controller.${DOMAIN}`)"
+      - "traefik.http.routers.unifiS.entrypoints=web-secure"
+      - "traefik.http.routers.unifiS.tls=true"
+      - "traefik.http.routers.unifiS.tls.certresolver=certificato"
+      - "traefik.http.routers.unifiS.tls.domains[0].main=*.${DOMAIN}"
+      - "traefik.http.routers.unifiS.tls.options=myTLSOptions@file"
+      - "traefik.http.routers.unifiS.service=UnifiService"
+      - "traefik.http.services.UnifiService.loadBalancer.server.port=8443"
+      - "traefik.http.services.UnifiService.loadbalancer.server.scheme=https"
+    environment:
+      - TZ=UTC
+      - PUID=1000
+      - PGID=1000
+      - MEM_LIMIT=1024M
+    restart: always
 
 
 
-volumes:
+# =============================================================
+#
+#	PI HOLE
+#
+# =============================================================
 
-  grafana-storage:
+  pihole:
+    container_name: pihole
+    image: pihole/pihole:latest
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+    environment:
+      TZ: ${TIME_ZONE}
+      WEBPASSWORD: '${PI_HOLE_PASSWORD}'
+    # Volumes store your data between container upgrades
+    volumes:
+      - '/volume1/docker/pihole/pihole/:/etc/pihole/'
+      - '/volume1/docker/pihole/dnsmasq.d/:/etc/dnsmasq.d/'
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.homeaut.rule=Host(`pihole.${DOMAIN}`)'
+      - 'traefik.http.routers.homeaut.entrypoints=web-secure'
+      - 'traefik.http.routers.homeaut.tls=true'
+      - "traefik.http.routers.homeaut.tls.certresolver=certificato"
+      - "traefik.http.routers.homeaut.tls.domains[0].main=*.${DOMAIN}"
+      - "traefik.http.routers.homeaut.service=homeautService"
+      - "traefik.http.services.homeautService.loadBalancer.server.port=80"
+    restart: unless-stopped
 
-  nodered-storage:
+
+
+# =============================================================
+#
+#	MOSQUITTO
+#
+# =============================================================
+
+  mosquitto:
+    image: eclipse-mosquitto
+    container_name: mqtt
+    volumes:
+      - /volume1/docker/mosquitto/config:/mosquitto/config
+      - /volume1/docker/mosquitto/data:/mosquitto/data
+      # - /volume1/docker/mosquitto/log:/mosquitto/log
+    # labels:
+    #   - 'traefik.enable=true'
+    #   # - 'traefik.tcp.routers.mqtt.rule=HostSNI(`mqtt.${DOMAIN}`)'
+    #   - 'traefik.tcp.routers.mqtt.entrypoints=tcpep'
+    #   # - 'traefik.tcp.routers.mqtt.tls=true'
+    #   # - "traefik.tcp.routers.mqtt.tls.certresolver=certificato"
+    #   # - "traefik.tcp.routers.mqtt.tls.domains[0].main=*.${DOMAIN}"
+    #   - "traefik.tcp.routers.mqtt.service=mqttService"
+    #   - "traefik.tcp.services.mqttService.loadBalancer.server.port=1883"
+    ports:
+      - 1883:1883
+    restart: unless-stopped
+    # environment:
+    #   - TZ=${TIME_ZONE}
+
+# =============================================================
+#
+#	WIKI.JS
+#
+# =============================================================
+
+  wikijs-db:
+    container_name: wikijs-db
+    image: postgres:11-alpine
+    environment:
+      POSTGRES_DB: wiki
+      POSTGRES_PASSWORD: ${WIKIJS_DB_PASSWORD}
+      POSTGRES_USER: wikijs
+      TZ: ${TIME_ZONE_ZUERICH}
+    logging:
+      driver: "none"
+    restart: unless-stopped
+    volumes:
+      - /volume1/docker/wikijs-db:/var/lib/postgresql/data
+
+  wikijs:
+    image: requarks/wiki:2
+    container_name: wikijs
+    depends_on:
+      - wikijs-db
+    environment:
+      DB_TYPE: postgres
+      DB_HOST: wikijs-db
+      DB_PORT: 5432
+      DB_USER: wikijs
+      DB_PASS: ${WIKIJS_DB_PASSWORD}
+      DB_NAME: wiki
+      TZ: ${TIME_ZONE_ZUERICH}
+    restart: unless-stopped
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.wikijs.rule=Host(`wiki.${DOMAIN}`)'
+      - 'traefik.http.routers.wikijs.entrypoints=web-secure'
+      - 'traefik.http.routers.wikijs.tls=true'
+      - "traefik.http.routers.wikijs.tls.certresolver=certificato"
+      - "traefik.http.routers.wikijs.tls.domains[0].main=*.${DOMAIN}"
+      - "traefik.http.routers.wikijs.tls.options=myTLSOptions@file"
+      - "traefik.http.routers.wikijs.service=wikijsService"
+      - "traefik.http.services.wikijsService.loadBalancer.server.port=3000"
+    restart: unless-stopped
+
+
+# =============================================================
+#
+#	LIGHTTPD
+#
+# =============================================================
+
+
+  lighttpd:
+    image: sebp/lighttpd
+    volumes:
+      - /volume1/docker/lighttpd:/var/www/localhost/htdocs
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.lighttpd.rule=Host(`light.${DOMAIN}`)'
+      - 'traefik.http.routers.lighttpd.entrypoints=web-secure'
+      - 'traefik.http.routers.lighttpd.tls=true'
+      - "traefik.http.routers.lighttpd.tls.certresolver=certificato"
+      - "traefik.http.routers.lighttpd.tls.domains[0].main=*.${DOMAIN}"
+      #- "traefik.http.routers.lighttpd.tls.options=myTLSOptions@file"
+      - "traefik.http.routers.lighttpd.service=lighttpdService"
+      - "traefik.http.services.lighttpdService.loadBalancer.server.port=80"
+    tty: true
+
+
+# =============================================================
+#
+#	BORG BACKUP SERVER CON VORTA
+#
+# =============================================================
+
+  backup-server:
+    image: linuxserver/openssh-server
+    container_name: backup-server
+    environment:
+      - PUID=1026
+      - PGID=100
+      - TZ=${TIME_ZONE_ZUERICH}
+      - PUBLIC_KEY=${SSH_KEY}
+      - SUDO_ACCESS=false
+      - PASSWORD_ACCESS=false
+      - USER_NAME=frigi
+    volumes:
+      - /volume1/docker/backup/config:/config
+    ports:
+      - 12222:2222
+    # labels:
+    #   - 'traefik.enable=true'
+    #   - 'traefik.tcp.routers.backup.rule=HostSNI(`backup.${DOMAIN}`)'
+    #   - 'traefik.tcp.routers.backup.entrypoints=tcpep'
+    #   - 'traefik.tcp.routers.backup.tls=true'
+    #   - "traefik.tcp.routers.backup.tls.certresolver=certificato"
+    #   - "traefik.tcp.routers.backup.tls.domains[0].main=*.${DOMAIN}"
+    #   - "traefik.tcp.routers.backup.service=backupService"
+    #   - "traefik.tcp.services.backupService.loadBalancer.server.port=2222"
+    restart: unless-stopped
