@@ -1,6 +1,6 @@
 # Client TLS certificate - mutual TLS (mTLS)
 
-This example shows a simple configuration of Traefik with with client certificate (mutual RLS or mTLS).
+This example shows a simple configuration of Traefik with client certificate (mutual RLS or mTLS). [Mutual TLS](https://medium.com/littlemanco/the-magic-of-tls-x509-and-mutual-authentication-explained-b2162dec4401) protect a https service by asking a valid TLS certificate from the client.
 
 
 ## Prerequisites
@@ -54,9 +54,9 @@ openssl pkcs12 -export -clcerts -in client/client.crt -inkey client/client.key -
         clientAuthType = "RequireAndVerifyClientCert"
 ```
 
-2. In the filed `caFiles` you can add all your client certificates that you want to allow the access
+2. In the filed `caFiles` you can add all your client certificates that you want to allow the access.
 
-3. Add all the client certificates to the Traefik container, the `.crt` file. The `ro` option is for read-only
+3. Add all the client certificates to the Traefik container, the `.crt` file. The `ro` option is for read-only.
 
 ```yaml
 volumes:
@@ -72,7 +72,7 @@ docker-compose up -d reverse-proxy
 
 ## Container configuration
 
-1. Add the follow laber to the container that you want protect:
+1. Add the follow label to the container that you want to protect:
 
 ```yaml
 - "traefik.http.routers.CHANGE_ROUTER_NAME.tls.options=myTLSOptions@file"
@@ -80,7 +80,7 @@ docker-compose up -d reverse-proxy
 # !!! change the router name
 ```
 
-2. Recreate the conainter, in this example the `whoami` container
+2. Recreate the container, in this example the `whoami` container.
 
 ```bash
 docker-compose up -d whoami
@@ -98,11 +98,11 @@ curl -sv https://whoami.example.com --cert client/client.crt --key client/client
 # you can access the container page
 ```
 
-2. If the respose is ok, you can test with your browser if the page is loaded without the certificate. In Chroma based browser you see an error, but on Firefox notthing appears.
+2. If the response is ok, you can test with your browser if the page is loaded without the certificate. In Chroma based browser you see an error, but on Firefox nothing appears.
 
-3. Now you can import the certificate into the browser (the `.p12` file), reload the page
+3. Now you can import the certificate into the browser (the `.p12` file), reload the page.
 
-4. In Firefox the first the you are asked to chose the certificate you want send to the server. The same append in Chrome but every time you boot the browser
+4. In Firefox the first time you are asked to choose the certificate you want to send to the server. The same append in Chrome but every time you boot the browser.
 
 
 If you find a problem in this guide or configurations files you can open an [issue](https://github.com/frigi83/traefik-examples/issues) on GitHub. Thanks!
