@@ -18,6 +18,7 @@ All this examples are based on traefik **version 2.x**.
 - **authelia**: SSO and 2FA with a local server
 - **tcp**: TCP entry point for non HTTP services
 - **mTLS**: securing services with mutual TLS (mTLS)
+- **Guacamole**: installing guide for Guacamole
 
 
 ### Installing
