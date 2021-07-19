@@ -21,7 +21,8 @@
       entryPoints = ["web-secure"]
       service = "service-plex"
       rule = "Host(`plex.example.org`)"     #Cambiare con il proprio dominio
-      certresolver="certificato"
+      [http.routers.plex.tls]
+        certresolver="certificato"
       [[http.routers.plex.tls.domains]]
         main = "*.example.org"              #Cambiare con il proprio dominio
 
