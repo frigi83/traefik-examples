@@ -14,25 +14,5 @@
 
     sniStrict = true
 
-  [tls.options.myTLSOptions]
-    [tls.options.myTLSOptions.clientAuth]
-		caFiles = ["client.crt"]
-		clientAuthType = "RequireAndVerifyClientCert"
 
 [http]
-  # Add the router
-  [http.routers]
-    [http.routers.hassio]
-      entryPoints = ["web-secure"]
-      service = "service-hassio"
-      rule = "Host(`ha.example.org`)"     #Cambiare con il proprio dominio
-      certresolver="certificato"
-      options="myTLSOptions@file"
-      [[http.routers.hassio.tls.domains]]
-        main = "*.example.org"              #Cambiare con il proprio dominio
-
-  # Add the service
-    [http.services.service-hassio]
-      [http.services.service-hassio.loadBalancer]
-        [[http.services.service-hassio.loadBalancer.servers]]
-          url = "http://192.168.1.123:8123"

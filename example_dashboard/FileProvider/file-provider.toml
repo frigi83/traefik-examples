@@ -15,18 +15,3 @@
     sniStrict = true
 
 [http]
-  # Add the router
-  [http.routers]
-    [http.routers.plex]
-      entryPoints = ["web-secure"]
-      service = "service-plex"
-      rule = "Host(`plex.example.org`)"     #Cambiare con il proprio dominio
-      certresolver="certificato"
-      [[http.routers.plex.tls.domains]]
-        main = "*.example.org"              #Cambiare con il proprio dominio
-
-  # Add the service
-    [http.services.service-plex]
-      [http.services.service-plex.loadBalancer]
-        [[http.services.service-plex.loadBalancer.servers]]
-          url = "https://192.168.1.123:32400"
