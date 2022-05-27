@@ -20,6 +20,7 @@ All this examples are based on traefik **version 2.x**.
 - **mTLS**: securing services with mutual TLS (mTLS)
 - **Guacamole**: installing guide for Guacamole
 - **Ping**: check the traefik status with an http ping
+- **Nextcloud**: personal office online with ONLYOFFICE
 
 
 ### Installing
