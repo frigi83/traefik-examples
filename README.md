@@ -21,6 +21,7 @@ All this examples are based on traefik **version 2.x**.
 - **Guacamole**: installing guide for Guacamole
 - **Ping**: check the traefik status with an http ping
 - **Nextcloud**: personal office online with ONLYOFFICE
+- **network segregation**: segment the traffic of containers
 
 
 ### Installing
