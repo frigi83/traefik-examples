@@ -22,6 +22,7 @@ All this examples are based on traefik **version 2.x**.
 - **Ping**: check the traefik status with an http ping
 - **Nextcloud**: personal office online with ONLYOFFICE
 - **network segregation**: segment the traffic of containers
+- **multiple domains**: multi domain pointing to a single container
 
 
 ### Installing
