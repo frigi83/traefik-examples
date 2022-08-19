@@ -49,3 +49,8 @@ All this examples are based on traefik **version 2.x**.
 ## Help me
 
 If you find a problem in this guide or in the configurations files you can open an [issue](https://github.com/frigi83/traefik-examples/issues) on GitHub. Thanks!
+
+
+### Infrastructure model
+
+![Infrastructure model](.infragenie/infrastructure_model.png)
