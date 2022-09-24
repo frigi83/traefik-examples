@@ -36,7 +36,6 @@ services:
       CF_API_KEY: ${CF_API_KEY}
       CLOUDFLARE_EMAIL: ${CLOUDFLARE_EMAIL}
       CLOUDFLARE_API_KEY: ${CLOUDFLARE_API_KEY}
-    container_name: traefik
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.api.rule=Host(`traefik.${DOMAIN}`)"
@@ -143,4 +142,6 @@ services:
 
       - "traefik.http.middlewares.onlyoffice-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
       - "traefik.http.middlewares.onlyoffice-headers.headers.accesscontrolalloworiginlist=*"
+    environment:
+      - JWT_SECRET=${ONLYOFFICE_SECRET}
     restart: unless-stopped
