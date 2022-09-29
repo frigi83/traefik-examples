@@ -11,7 +11,7 @@ This example shows how to configurate [Nextcloud](https://nextcloud.com/) and [O
 
 ## Container configuration
 
-1. Cange all needed values in the `.env` file
+1. Change all needed values in the `.env` file
 
 2. Create the Nextcloud container (may need sudo), it will automatic firse generate also the database container
 
@@ -33,6 +33,7 @@ docker-compose up -d onlyoffice
 
 7. In the settings page the is a new tab `ONLYOFFICE ` on the left add this values:
 	- ONLYOFFICE Docs address: https://office.example.com
+	- secret: same as value of `ONLYOFFICE_SECRET`
 	- open andvanced server settings
 	- ONLYOFFICE Docs address for internal requests: https://office.example.com
 	- Save the settings
