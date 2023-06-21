@@ -35,19 +35,19 @@ With the Ubuntu container we can check the reachebeality of the two whoami conta
 
 ## Installing
 
-1. Generate all the container with this command (maybe you need sudo).
+1. Generate all the container with this command.
 
     ```bash
-    docker-compose up -d
+    sudo docker compose up -d
     ```
 
-2. Generate the Ubuntu container (mybe you need sudo)
+2. Generate the Ubuntu container
 
 	```bash
-		docker run --name ubuntutest -d -it ubuntu
+		sudo docker run --name ubuntutest -d -it ubuntu
 	```
 
-3. Connect Ubuntu to the whoami1 network, first you need to identify the networkname assigned from `docker-compose`. In the results from the firs command you should find a text like `xyz_net_whoami1`. `xyz` can be you username or another text. Copy the text in the second command.
+3. Connect Ubuntu to the whoami1 network, first you need to identify the networkname assigned from `docker-compose`. In the results from the firs command you should find a text like `xyz_net_whoami1`. `xyz` is the stack name. Copy the text in the second command.
 
 	```bash
   	sudo docker network ls
@@ -77,6 +77,14 @@ With the Ubuntu container we can check the reachebeality of the two whoami conta
 	```
 
 7. The ping results show that `whoami1` is reacheable and `whoami2` is not reacheable
+
+8. If you want to tell traefik on wich network is a container reacheable, you have to add this label. Please take care that the network name contain the stack name.
+
+	```yaml
+		labels:
+			...
+			- "traefik.docker.network=${DOCKER_STACK}_net_whoami1"
+	```
 
 ### Security
 

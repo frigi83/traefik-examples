@@ -43,7 +43,6 @@ services:
       CF_API_KEY: ${CF_API_KEY}
       CLOUDFLARE_EMAIL: ${CLOUDFLARE_EMAIL}
       CLOUDFLARE_API_KEY: ${CLOUDFLARE_API_KEY}
-    container_name: traefik
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.api.rule=Host(`traefik.${DOMAIN}`)"
@@ -78,7 +77,7 @@ services:
       - "traefik.http.routers.whoami.entrypoints=web-secure"
       - "traefik.http.routers.whoami.tls.certresolver=certificato"
       - "traefik.http.routers.whoami.tls.domains[0].main=*.${DOMAIN}"
-      - "traefik.docker.network=net_whoami1"
+      - "traefik.docker.network=${DOCKER_STACK}_net_whoami1"
 
   whoami2:
     image: containous/whoami
@@ -91,4 +90,4 @@ services:
       - "traefik.http.routers.whoami.entrypoints=web-secure"
       - "traefik.http.routers.whoami.tls.certresolver=certificato"
       - "traefik.http.routers.whoami.tls.domains[0].main=*.${DOMAIN}"
-      - "traefik.docker.network=net_whoami2"
+      - "traefik.docker.network=${DOCKER_STACK}_net_whoami2"
