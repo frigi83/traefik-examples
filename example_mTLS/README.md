@@ -39,7 +39,7 @@ openssl req -new -key client/client.key -sha256 -out client/client.csr
 openssl x509 -req -days 365 -sha256 -in client/client.csr -CA ca/ca.crt -CAkey ca/ca.key -set_serial 1 -out client/client.crt
 
 # generate the .p12 (certificate + key)
-openssl pkcs12 -export -clcerts -in client/client.crt -inkey client/client.key -out client/client.p12
+openssl pkcs12 -export -clcerts -in client/client.crt -inkey client/client.key -out client/client.p12 -legacy
 ```
 
 ## Traefik configuration
@@ -50,18 +50,18 @@ openssl pkcs12 -export -clcerts -in client/client.crt -inkey client/client.key -
 [tls.options]
     [tls.options.myTLSOptions]
     [tls.options.myTLSOptions.clientAuth]
-        caFiles = ["client.crt"]   # aggiungere tutti i certificati client necessari ["client1","client2"]
+        caFiles = ["ca.crt"]   # aggiungere tutti i certificati CA necessari ["ca1.crt","ca2.crt"]
         clientAuthType = "RequireAndVerifyClientCert"
 ```
 
-2. In the filed `caFiles` you can add all your client certificates that you want to allow the access.
+2. In the filed `caFiles` you can add all your CA certificates that you want to allow the access.
 
 3. Add all the client certificates to the Traefik container, the `.crt` file. The `ro` option is for read-only.
 
 ```yaml
 volumes:
     ...
-    - /your/path/cert/client/client.crt:/client.crt:ro
+    - /your/path/cert/ca/ca.crt:/ca.crt:ro
 ```
 
 4. Recreate the Traefik container with the command:
