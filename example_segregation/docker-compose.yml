@@ -13,7 +13,7 @@ services:
 # =============================================================
 
   traefik:
-    image: traefik:latest
+    image: traefik:v2.11
     container_name: traefik
     networks:
       - net_whoami1

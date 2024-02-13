@@ -19,7 +19,7 @@ services:
 # =============================================================
 
   reverse-proxy:
-    image: traefik:latest
+    image: traefik:v2.11
     container_name: reverse-proxy
     command:
       # - "--log.level=DEBUG"

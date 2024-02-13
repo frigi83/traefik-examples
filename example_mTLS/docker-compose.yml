@@ -9,7 +9,7 @@ services:
 # =============================================================
 
   reverse-proxy:
-    image: traefik:latest
+    image: traefik:v2.11
     command:
       # - "--log.level=DEBUG"
       # - "--api.dashboard=true"

@@ -9,7 +9,7 @@ services:
 # =============================================================
 
   traefik:
-    image: traefik:latest
+    image: traefik:v2.11
     container_name: traefik
     command:
       # - "--log.level=DEBUG"
