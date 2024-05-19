@@ -23,6 +23,7 @@ All this examples are based on traefik **version 2.x**.
 - **Nextcloud**: personal office online with ONLYOFFICE
 - **network segregation**: segment the traffic of containers
 - **multiple domains**: multi domain pointing to a single container
+- **Tailscale**: certificate from Tailscale (Traefik V3)
 
 
 ### Installing
